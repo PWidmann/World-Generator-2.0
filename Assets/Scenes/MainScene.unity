@@ -520,23 +520,32 @@ MonoBehaviour:
     type: 3}
   noiseLayers:
   - name: GroundLayer
-    heightScale: 80
-    seed: 1363
-    frequency: 0.51
-    amplitude: 3.8
+    heightScale: 20
+    seed: 815
+    frequency: 0.75
+    amplitude: 1.2
     lacunarity: 1.43
     persistance: 0.5
     octaves: 3
     scale: 132.9
   - name: MountainyLayer
-    heightScale: 3
-    seed: 3491
-    frequency: 0.27
-    amplitude: 15.76
+    heightScale: 313.8
+    seed: 4732
+    frequency: 1.05
+    amplitude: 10
     lacunarity: 0.5
     persistance: 0.5
     octaves: 3
-    scale: 184.4
+    scale: 981.2
+  - name: MountanTipLayer
+    heightScale: 446.1
+    seed: 5844
+    frequency: 0.77
+    amplitude: 60.4
+    lacunarity: 0.54
+    persistance: 0.5
+    octaves: 3
+    scale: 4252
   fallOffValueA: 3
   fallOffValueB: 2.2
 --- !u!4 &1419373294

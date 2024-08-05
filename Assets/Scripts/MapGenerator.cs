@@ -105,8 +105,9 @@ public class MapGenerator : MonoBehaviour
         float startTime2 = Time.realtimeSinceStartup;
         GenerateChunkData( _mapSize, _chunkSize);
         Debug.Log("Generating noise data took: " + ((Time.realtimeSinceStartup - startTime2) * 1000f) + "ms");
-
+        
         startTime3 = Time.realtimeSinceStartup;
+
         StartCoroutine(GenerateChunkObjects());
         
     }
@@ -118,16 +119,22 @@ public class MapGenerator : MonoBehaviour
 
         foreach (ChunkData chunkData in chunkDataList)
         {
+            float startTime = Time.realtimeSinceStartup;
+            
+            GameObject tempObj = Instantiate(terrainChunkPrefab);
+            
             var mesh = new Mesh();
             mesh.SetVertices(chunkData.vertices);
             mesh.SetTriangles(chunkData.triangles, 0);
             mesh.SetUVs(0, chunkData.uvs);
             mesh.RecalculateNormals();
 
-            GameObject tempObj = Instantiate(terrainChunkPrefab);
             tempObj.GetComponent<MeshRenderer>().sharedMaterial = terrainMaterial;
             tempObj.GetComponent<MeshFilter>().mesh = mesh;
             tempObj.GetComponent<MeshCollider>().sharedMesh = mesh;
+            Debug.Log("instantiate mesh and data and assign to GO: " + ((Time.realtimeSinceStartup - startTime) * 1000f) + "ms");
+
+
             tempObj.transform.SetParent(gameWorld.transform);
             tempObj.transform.position = new Vector3(chunkData.terrainPosition.x, 0, chunkData.terrainPosition.y);
             yield return null;
@@ -162,18 +169,26 @@ public class MapGenerator : MonoBehaviour
     {
         Vector3[] vertices = new Vector3[(chunkSize + 1) * (chunkSize + 1)];
 
-        // Base noise map
         float[,] noiseValues = layerNoises[0].GetNoiseValues(terrainPosition.x, terrainPosition.y, chunkSize, noiseLayers[0].scale);
-
-        float[,] noiseValues2 = layerNoises[1].GetNoiseValues(terrainPosition.x, terrainPosition.y, chunkSize, noiseLayers[0].scale);
-
-        //// add additional noise maps here
+        float[,] noiseValues2 = layerNoises[1].GetNoiseValues(terrainPosition.x, terrainPosition.y, chunkSize, noiseLayers[1].scale);
+        float[,] noiseValues3 = layerNoises[2].GetNoiseValues(terrainPosition.x, terrainPosition.y, chunkSize, noiseLayers[2].scale);
 
         for (int i = 0, z = 0; z <= chunkSize; z++)
         {
             for (int x = 0; x <= chunkSize; x++)
             {
-                float y = (((noiseValues[x, z] * noiseLayers[0].heightScale)) + (noiseValues2[x, z] * noiseLayers[1].heightScale));
+                float y = ((((1 + noiseValues[x, z]) * noiseLayers[0].heightScale) - noiseLayers[0].heightScale));
+
+                if (noiseValues[x, z] >= 0.6f)
+                {
+                    y += ((1 + noiseValues2[x, z]) * noiseLayers[1].heightScale - noiseLayers[1].heightScale);
+                }
+
+                if (noiseValues2[x, z] >= 0.7f)
+                { 
+                    y += ((1 + noiseValues3[x, z]) * noiseLayers[2].heightScale - noiseLayers[2].heightScale);
+                }
+                            
 
 
 
@@ -243,37 +258,22 @@ public class MapGenerator : MonoBehaviour
         return uv;
     }
 
-    float[,] SubtractingFalloff(float[,] noiseValues, int terrainXpos, int terrainYpos)
+    float[,] SubtractingFalloff(float[,] noiseValues, int terrainXpos, int terrainYpos, int chunkSize)
     {
-        float[,] newNoiseValues = noiseValues;
-        //Texture2D tex = new Texture2D(newNoiseValues.GetLength(0), newNoiseValues.GetLength(1));
+        
 
-        //blah to do wo auf der falloffmap???
+        int xMinPos = terrainXpos * chunkSize;
+        int yMinPos = terrainYpos * chunkSize;
 
-        //int xMinPos = terrainXpos * chunkSize;
-        //int yMinPos = terrainYpos * chunkSize;
-        //
-        //
-        //for (int x = 0; x < newNoiseValues.GetLength(0); x++)
-        //{
-        //    for (int y = 0; y < newNoiseValues.GetLength(1); y++)
-        //    {
-        //        // SUBSTRACT FALLOFF MAP VALUES || test: string [] c = a.Except(b).ToArray();
-        //        newNoiseValues[x, y] = Mathf.Clamp01(newNoiseValues[x, y] - falloffMap[x + xMinPos, y + yMinPos]);
-        //
-        //        //float c = Mathf.Clamp01(newNoiseValues[x, y]);
-        //        //tex.SetPixel(x, y, new Color(c, c, c));
-        //    }
-        //}
+        for (int x = 0; x < noiseValues.GetLength(0); x++)
+        {
+            for (int y = 0; y < noiseValues.GetLength(1); y++)
+            {
+                // SUBSTRACT FALLOFF MAP VALUES
+                noiseValues[x, y] = Mathf.Clamp01(noiseValues[x, y] - falloffMap[x + xMinPos, y + yMinPos]);
+            }
+        }
 
-
-
-        //tex.Apply();
-        //
-        //fallOffImage.texture = tex;
-        //fallOffImage.texture.filterMode = FilterMode.Point;
-        //fallOffImage.color = Color.white;
-
-        return newNoiseValues;
+        return noiseValues;
     }
 }
