@@ -31,12 +31,12 @@ public class PerlinNoise
     /// <summary>
     /// Gets called per chunk
     /// </summary>
-    public float[,] GetNoiseValues(int xPos, int yPos, int chunkSize)
+    public float[,] GetNoiseValues(int xPos, int yPos, int chunkSize, float scale)
     {
         float[,] noiseValues = new float[chunkSize + 1, chunkSize + 1];
 
-        int xMinPos = xPos * chunkSize;
-        int yMinPos = yPos * chunkSize;
+        int xMinPos = xPos;
+        int yMinPos = yPos;
 
         for (int x = 0; x < noiseValues.GetLength(0); x++)
         {
@@ -49,7 +49,7 @@ public class PerlinNoise
 
                 for (int k = 0; k < octaves; k++)
                 {
-                    noiseValues[x, y] += Mathf.PerlinNoise((xMinPos + x + seed) / 200f * frequency, (yMinPos + y + seed) / 200f * frequency) * amplitude;
+                    noiseValues[x, y] += Mathf.PerlinNoise(((xMinPos + x) / scale * frequency) * amplitude + seed, ((yMinPos + y) / scale * frequency) * amplitude + seed);
                     frequency *= lacunarity;
                     amplitude *= persistance;
                 }

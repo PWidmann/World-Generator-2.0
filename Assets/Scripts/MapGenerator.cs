@@ -16,45 +16,44 @@ public struct ChunkData
     public Vector3[] vertices;
     public int[] triangles;
     public Vector2[] uvs;
-    public Vector2 terrainPosition;
+    public Vector2Int terrainPosition;
+}
+
+[Serializable]
+public struct NoiseLayer
+{
+    public string name;
+    public float heightScale;
+    public int seed;
+    public float frequency;
+    public float amplitude;
+    public float lacunarity;
+    public float persistance;
+    public int octaves;
+    public float scale;
 }
 
 public class MapGenerator : MonoBehaviour
 {
-
     [Header("Map Settings")]
-    [SerializeField] private int _mapSize = 500; // Must be a multiple of chunkSize
+    [SerializeField] private int _mapSize = 500;
     [SerializeField] private int _chunkSize = 100;
     [SerializeField] private bool useFalloff = false;
-
     [SerializeField] private GameObject gameWorld;
     [SerializeField] private Material terrainMaterial;
     [SerializeField] private AnimationCurve animCurve;
-
-    [Header("Perlin Values")]
-    public float heightScale = 2.0f;
-    public int seed = 1337;
-    public float frequency = 6.4f;
-    public float amplitude = 3.8f;
-    public float lacunarity = 1.8f;
-    private float persistance = 0.5f;
-    public int octaves = 3;
-
+    [SerializeField] private GameObject terrainChunkPrefab;
+    [SerializeField] private NoiseLayer[] noiseLayers;
     [SerializeField] private float fallOffValueA = 3;
     [SerializeField] private float fallOffValueB = 2.2f;
 
     private int chunksPerRow;
     // Complete map noise
-    private PerlinNoise noise;
+    private PerlinNoise[] noises;
 
     private float[,] falloffMap;
 
-    // Terrain chunk temp values
-    private float[,] noiseValues;
-    private Mesh tempMesh;
-    private Vector3[] vertices;
-    private int[] triangles;
-    private Vector2[] uv;
+    float minMapHeight = 1000;
 
     private List<GameObject> chunks = new List<GameObject>();
     GameObject tempObj;
@@ -64,11 +63,11 @@ public class MapGenerator : MonoBehaviour
     int lastChunksPerRow = 0;
     float startTime3;
 
+    private List<PerlinNoise> layerNoises = new List<PerlinNoise>();
+
     private void Start()
     {
         GenerateNewMap();
-
-        
     }
 
     private void Update()
@@ -89,10 +88,18 @@ public class MapGenerator : MonoBehaviour
         }
         chunksPerRow = _mapSize / _chunkSize;
 
-        
-
         float startTime = Time.realtimeSinceStartup;
-        noise = new PerlinNoise(seed, frequency, amplitude, lacunarity, persistance, octaves);
+
+        layerNoises.Clear();
+
+
+        foreach (NoiseLayer layer in noiseLayers)
+        {
+            PerlinNoise noise = new PerlinNoise(layer.seed, layer.frequency, layer.amplitude, layer.lacunarity, layer.persistance, layer.octaves);
+            layerNoises.Add(noise);
+        }
+        //noise = new PerlinNoise(seed, frequency, amplitude, lacunarity, persistance, octaves);
+        //noise2 = new PerlinNoise(seed, frequency/2, amplitude, lacunarity, persistance, octaves);
         Debug.Log("instantiating 'noise' took: " + ((Time.realtimeSinceStartup - startTime) * 1000f) + "ms");
 
         float startTime2 = Time.realtimeSinceStartup;
@@ -106,7 +113,8 @@ public class MapGenerator : MonoBehaviour
 
     private IEnumerator GenerateChunkObjects()
     {
-        
+        SetMapToGround(minMapHeight);
+
 
         foreach (ChunkData chunkData in chunkDataList)
         {
@@ -116,16 +124,10 @@ public class MapGenerator : MonoBehaviour
             mesh.SetUVs(0, chunkData.uvs);
             mesh.RecalculateNormals();
 
-            //Create terrain chunks and add them to list
-            GameObject tempObj = new GameObject("TerrainChunk");
-            MeshRenderer meshRenderer = (MeshRenderer)tempObj.AddComponent(typeof(MeshRenderer));
-            meshRenderer.sharedMaterial = terrainMaterial;
-
-            MeshFilter meshFilter = (MeshFilter)tempObj.AddComponent(typeof(MeshFilter));
-            meshFilter.mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-            meshFilter.mesh = mesh;
-            
-            MeshCollider meshCollider = (MeshCollider)tempObj.AddComponent(typeof(MeshCollider));
+            GameObject tempObj = Instantiate(terrainChunkPrefab);
+            tempObj.GetComponent<MeshRenderer>().sharedMaterial = terrainMaterial;
+            tempObj.GetComponent<MeshFilter>().mesh = mesh;
+            tempObj.GetComponent<MeshCollider>().sharedMesh = mesh;
             tempObj.transform.SetParent(gameWorld.transform);
             tempObj.transform.position = new Vector3(chunkData.terrainPosition.x, 0, chunkData.terrainPosition.y);
             yield return null;
@@ -136,8 +138,6 @@ public class MapGenerator : MonoBehaviour
 
     private void GenerateChunkData(int mapSize, int chunkSize)
     {
-        int numberOfJunks = (mapSize / chunkSize) * (mapSize / chunkSize);
-
         int[] triangleList = GetTriangleList(chunkSize);
         Vector2[] uvList = GetUVList(chunkSize);
 
@@ -149,7 +149,7 @@ public class MapGenerator : MonoBehaviour
                 chunkData.chunkID = i;
                 chunkData.triangles = triangleList;
                 chunkData.uvs = uvList;
-                chunkData.terrainPosition = new Vector2(x * chunkSize, z * chunkSize);
+                chunkData.terrainPosition = new Vector2Int(x * chunkSize, z * chunkSize);
                 chunkData.vertices = GetChunkVertices(chunkData.terrainPosition, chunkSize);
 
                 chunkDataList.Add(chunkData);
@@ -158,22 +158,43 @@ public class MapGenerator : MonoBehaviour
         }
     }
 
-    private Vector3[] GetChunkVertices(Vector2 terrainPosition, int chunkSize)
+    private Vector3[] GetChunkVertices(Vector2Int terrainPosition, int chunkSize)
     {
         Vector3[] vertices = new Vector3[(chunkSize + 1) * (chunkSize + 1)];
-        float[,] noiseValues = noise.GetNoiseValues((int)terrainPosition.x, (int)terrainPosition.y, chunkSize);
+
+        // Base noise map
+        float[,] noiseValues = layerNoises[0].GetNoiseValues(terrainPosition.x, terrainPosition.y, chunkSize, noiseLayers[0].scale);
+
+        float[,] noiseValues2 = layerNoises[1].GetNoiseValues(terrainPosition.x, terrainPosition.y, chunkSize, noiseLayers[0].scale);
+
+        //// add additional noise maps here
 
         for (int i = 0, z = 0; z <= chunkSize; z++)
         {
             for (int x = 0; x <= chunkSize; x++)
             {
-                float y = animCurve.Evaluate(noiseValues[x, z]) * heightScale;
+                float y = (((noiseValues[x, z] * noiseLayers[0].heightScale)) + (noiseValues2[x, z] * noiseLayers[1].heightScale));
+
+
+
+                if (y < minMapHeight) minMapHeight = y;
                 vertices[i] = new Vector3(x, y, z);
                 i++;
             }
         }
 
         return vertices;
+    }
+
+    private void SetMapToGround(float minHeight)
+    {
+        foreach (ChunkData data in chunkDataList)
+        {
+            for (int i = 0; i < data.vertices.Length; i++)
+            {
+                data.vertices[i] = new Vector3(data.vertices[i].x, data.vertices[i].y - minHeight, data.vertices[i].z);
+            }
+        }
     }
 
     private int[] GetTriangleList(int chunkSize)

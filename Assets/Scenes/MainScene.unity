@@ -487,7 +487,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5061c2832e97d24faba7de05a14c3a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mapSize: 200
+  _mapSize: 1000
+  _chunkSize: 200
+  useFalloff: 0
   gameWorld: {fileID: 307802628}
   terrainMaterial: {fileID: 2100000, guid: 2d4819a60b51c2f4eac4a7f15b7ed14c, type: 2}
   animCurve:
@@ -514,20 +516,29 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  heightScale: 2
-  seed: 1337
-  frequency: 6.4
-  amplitude: 3.8
-  lacunarity: 1.8
-  octaves: 3
+  terrainChunkPrefab: {fileID: 1311922243202977980, guid: 3ab1088d541addd4da36cb4df3f64043,
+    type: 3}
+  noiseLayers:
+  - name: GroundLayer
+    heightScale: 80
+    seed: 1363
+    frequency: 0.51
+    amplitude: 3.8
+    lacunarity: 1.43
+    persistance: 0.5
+    octaves: 3
+    scale: 132.9
+  - name: MountainyLayer
+    heightScale: 3
+    seed: 3491
+    frequency: 0.27
+    amplitude: 15.76
+    lacunarity: 0.5
+    persistance: 0.5
+    octaves: 3
+    scale: 184.4
   fallOffValueA: 3
   fallOffValueB: 2.2
-  usePlateaus: 0
-  plateau1: 0.2
-  plateau2: 0.4
-  plateau3: 0.6
-  plateau4: 0.9
-  plateauSmoothing: 0.5
 --- !u!4 &1419373294
 Transform:
   m_ObjectHideFlags: 0
