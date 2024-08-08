@@ -15,6 +15,8 @@ public class PerlinNoise
     private float minVal;
     private float maxVal;
 
+
+
     public PerlinNoise(int seed, float frequency, float amplitude, float lacunarity, float persistance, int octaves)
     {
         this.seed = seed;

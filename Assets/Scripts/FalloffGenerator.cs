@@ -24,6 +24,26 @@ public static class FalloffGenerator
         return map;
     }
 
+    public static float[,] GenerateFalloffMapCircle(int width, int height, float falloffValue_a, float falloffValue_b)
+    {
+        float[,] map = new float[width, height];
+        for (int i = 0; i < width; i++)
+        {
+            for (int j = 0; j < height; j++)
+            {
+                float distance = Vector2.Distance(new Vector2(i, j), new Vector2(width / 2, height / 2));
+                map[i, j] = GetNormalizedValue(distance, 0, width / 2);
+            }
+        }
+
+        return map;
+    }
+
+    public static float GetNormalizedValue(float value, float min, float max)
+    {
+        return ((value - min) / (max - min));
+    }
+
     static float Evaluate(float value, float falloff_a, float falloff_b)
     {
         // FOR SMOOTH FALLOFF MAP
