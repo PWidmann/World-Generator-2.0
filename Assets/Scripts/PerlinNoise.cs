@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Threading;
+using Unity.Mathematics;
+using System;
 
 public class PerlinNoise
 {
