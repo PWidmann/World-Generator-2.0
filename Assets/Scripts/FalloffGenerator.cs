@@ -1,55 +1,76 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Burst;
+using Unity.Collections;
+using Unity.Jobs;
 using UnityEngine;
 
-public static class FalloffGenerator
+public class FalloffGenerator
 {
-    public static float[,] GenerateFalloffMap(int width, int height, float falloffValue_a, float falloffValue_b)
+    public float[,] GenerateFalloffMapCircle(int width, int height, float falloffValue_a, float falloffValue_b)
     {
-        float[,] map = new float[width, height];
+        // Flattened 2D array as a NativeArray<float>
+        NativeArray<float> falloffMap = new NativeArray<float>(width * height, Allocator.TempJob);
 
+        // Create and schedule the job
+        var job = new FalloffMapJob
+        {
+            width = width,
+            height = height,
+            falloffValue_a = falloffValue_a,
+            falloffValue_b = falloffValue_b,
+            falloffMap = falloffMap
+        };
+
+        JobHandle jobHandle = job.Schedule(width * height, 64);
+        jobHandle.Complete();
+
+        // Convert the flattened NativeArray back to a 2D float array
+        float[,] resultMap = new float[width, height];
         for (int i = 0; i < width; i++)
         {
             for (int j = 0; j < height; j++)
             {
-                float x = i / (float)width * 2 - 1;
-                float y = j / (float)height * 2 - 1;
-
-                float value = Mathf.Max(Mathf.Abs(x), Mathf.Abs(y));
-                map[i, j] = Evaluate(value, falloffValue_a, falloffValue_b);
-
+                resultMap[i, j] = falloffMap[i * height + j];
             }
         }
 
-        return map;
+        // Dispose of the NativeArray to avoid memory leaks
+        falloffMap.Dispose();
+
+        return resultMap;
     }
 
-    public static float[,] GenerateFalloffMapCircle(int width, int height, float falloffValue_a, float falloffValue_b)
+    [BurstCompile]
+    struct FalloffMapJob : IJobParallelFor
     {
-        float[,] map = new float[width, height];
-        for (int i = 0; i < width; i++)
+        public int width;
+        public int height;
+        public float falloffValue_a;
+        public float falloffValue_b;
+
+        [WriteOnly]
+        public NativeArray<float> falloffMap;
+
+        public void Execute(int index)
         {
-            for (int j = 0; j < height; j++)
-            {
-                float distance = Vector2.Distance(new Vector2(i, j), new Vector2(width / 2, height / 2));
-                map[i, j] = GetNormalizedValue(distance, 0, width / 2);
-            }
+            // Calculate the 2D coordinates from the flat index
+            int x = index / height;
+            int y = index % height;
+
+            // Calculate the distance to the center
+            float distance = Vector2.Distance(new Vector2(x, y), new Vector2(width / 2f, height / 2f));
+
+            // Normalize the distance using the GetNormalizedValue logic
+            float normalizedValue = GetNormalizedValue(distance, 0, width / 2f);
+
+            // Assign the normalized value to the falloff map
+            falloffMap[index] = normalizedValue;
         }
 
-        return map;
-    }
-
-    public static float GetNormalizedValue(float value, float min, float max)
-    {
-        return ((value - min) / (max - min));
-    }
-
-    static float Evaluate(float value, float falloff_a, float falloff_b)
-    {
-        // FOR SMOOTH FALLOFF MAP
-        float a = falloff_a;
-        float b = falloff_b;
-
-        return Mathf.Pow(value, a) / (Mathf.Pow(value, a) + Mathf.Pow(b - b * value, a));
+        private float GetNormalizedValue(float value, float min, float max)
+        {
+            return (value - min) / (max - min);
+        }
     }
 }

@@ -88,7 +88,8 @@ public class MapGenerator : MonoBehaviour
     float[,] chunksGeneratedCheck;
 
     List<NativeArray<Vector3>> terrainVerts = new List<NativeArray<Vector3>>();
-    
+
+    FalloffGenerator falloffGenerator = new FalloffGenerator();
 
     private void Start()
     {
@@ -133,7 +134,9 @@ public class MapGenerator : MonoBehaviour
         }
 
         float startTime = Time.realtimeSinceStartup;
-        falloffMap = FalloffGenerator.GenerateFalloffMapCircle(_mapSize + chunksPerRow, _mapSize + chunksPerRow, fallOffValueA, fallOffValueB);
+
+        
+        falloffMap = falloffGenerator.GenerateFalloffMapCircle(_mapSize + chunksPerRow, _mapSize + chunksPerRow, fallOffValueA, fallOffValueB);
         Debug.Log("instantiating 'complete map falloffMap' took: " + ((Time.realtimeSinceStartup - startTime) * 1000f) + "ms");
 
 
