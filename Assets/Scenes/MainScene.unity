@@ -948,7 +948,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5061c2832e97d24faba7de05a14c3a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _mapSize: 2000
+  _mapSize: 4000
   _chunkSize: 200
   useFalloff: 0
   gameWorld: {fileID: 307802628}

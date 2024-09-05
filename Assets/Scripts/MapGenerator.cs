@@ -85,7 +85,7 @@ public class MapGenerator : MonoBehaviour
 
     float currentVertHeight;
 
-    float[,] chunksGeneratedCheck;
+    int[,] chunksGeneratedCheck;
 
     List<NativeArray<Vector3>> terrainVerts = new List<NativeArray<Vector3>>();
 
@@ -112,9 +112,9 @@ public class MapGenerator : MonoBehaviour
         {
             Destroy(t.gameObject);
         }
-        chunksPerRow = _mapSize / _chunkSize;
 
-        chunksGeneratedCheck = new float[chunksPerRow, chunksPerRow];
+        chunksPerRow = _mapSize / _chunkSize;
+        chunksGeneratedCheck = new int[chunksPerRow, chunksPerRow];
         for (int x = 0; x < chunksGeneratedCheck.GetLength(0); x++)
         {
             for (int y = 0; y < chunksGeneratedCheck.GetLength(1); y++)
@@ -135,28 +135,30 @@ public class MapGenerator : MonoBehaviour
 
         float startTime = Time.realtimeSinceStartup;
 
-        
+        // Jobs
         falloffMap = falloffGenerator.GenerateFalloffMapCircle(_mapSize + chunksPerRow, _mapSize + chunksPerRow, fallOffValueA, fallOffValueB);
         Debug.Log("instantiating 'complete map falloffMap' took: " + ((Time.realtimeSinceStartup - startTime) * 1000f) + "ms");
-
-
-        
-
         float startTime2 = Time.realtimeSinceStartup;
-        GenerateChunkData(_mapSize, _chunkSize);
-        Debug.Log("Generating chunk structs with position: " + ((Time.realtimeSinceStartup - startTime2) * 1000f) + "ms");
+        tempTriangleList = GetTriangleList(_chunkSize); // Triangle indeces are the same for every chunk
+        tempUvList = GetUVList(_chunkSize); // UV lists are the same for every chunk
 
+        // No jobs yet
+        GenerateChunkDataNaked(_mapSize, _chunkSize, tempTriangleList, tempUvList);
+
+
+        Debug.Log("Generating chunk data without vertices: " + ((Time.realtimeSinceStartup - startTime2) * 1000f) + "ms");
+        
+       
+
+        Debug.Log("Generating complete chunk data: " + ((Time.realtimeSinceStartup - startTime2) * 1000f) + "ms");
         startTime3 = Time.realtimeSinceStartup;
 
         StartCoroutine(GenerateChunkObjects());
     }
 
     // The whole map
-    private void GenerateChunkData(int mapSize, int chunkSize)
+    private void GenerateChunkDataNaked(int mapSize, int chunkSize, int[] tempTriangleList, Vector2[] tempUvList)
     {
-        tempTriangleList = GetTriangleList(chunkSize); // Triangle indeces are the same for every chunk
-        tempUvList = GetUVList(chunkSize); // UV lists are the same for every chunk
-
         for (int i = 0, z = 0; z < (mapSize / chunkSize); z++)
         {
             for (int x = 0; x < (mapSize / chunkSize); x++)
@@ -166,12 +168,17 @@ public class MapGenerator : MonoBehaviour
                 chunkData.trianglesOld = tempTriangleList;
                 chunkData.uvs = tempUvList;
                 chunkData.terrainWorldPosition = new Vector2Int(x * chunkSize, z * chunkSize);
-                chunkData.verticesOld = GetChunkVertices(chunkData.terrainWorldPosition, chunkSize);
-
+                chunkData.verticesOld = AddChunkVerticesToChunkData(chunkData, mapSize, chunkSize);
                 chunkDataList.Add(chunkData);
                 i++;
             }
         }
+    }
+
+    private Vector3[] AddChunkVerticesToChunkData(ChunkData chunkData, int mapSize, int chunkSize)
+    {
+        Vector3[] verticesOld = GetChunkVertices(chunkData.terrainWorldPosition, chunkSize);
+        return verticesOld;
     }
 
     private IEnumerator GenerateChunkObjects()
