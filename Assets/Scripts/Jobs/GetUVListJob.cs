@@ -13,7 +13,6 @@ struct GetUVListJob : IJob
 
     public void Execute()
     {
-        // UVs
         for (int i = 0, z = 0; z <= chunkSize; z++)
         {
             for (int x = 0; x <= chunkSize; x++)

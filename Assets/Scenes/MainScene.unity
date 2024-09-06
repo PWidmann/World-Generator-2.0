@@ -281,7 +281,7 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.3
-  far clip plane: 1000
+  far clip plane: 5000
   field of view: 60
   orthographic: 0
   orthographic size: 5
@@ -632,7 +632,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &693491685
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -928,7 +928,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1419373294}
   - component: {fileID: 1419373293}
-  - component: {fileID: 1419373295}
   m_Layer: 0
   m_Name: MapGenerator
   m_TagString: Untagged
@@ -948,7 +947,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5061c2832e97d24faba7de05a14c3a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _mapSize: 4000
+  _mapSize: 2000
   _chunkSize: 200
   useFalloff: 0
   gameWorld: {fileID: 307802628}
@@ -1169,22 +1168,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1419373295
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1419373292}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c4b97a8fa3448df4eb63fa73da06a7af, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  noise1image: {fileID: 882425237}
-  noise2image: {fileID: 914714109}
-  noise3image: {fileID: 1986355442}
-  noise4image: {fileID: 2109020132}
 --- !u!1 &1986355440
 GameObject:
   m_ObjectHideFlags: 0

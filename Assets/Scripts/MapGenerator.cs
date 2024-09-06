@@ -54,11 +54,8 @@ public class MapGenerator : MonoBehaviour
 
 
     private int chunksPerRow;
-    
     private PerlinNoise[] noises;
-
     private float[,] falloffMap;
-
     float minMapHeight = 1000;
     float maxMapHeight = 0;
 
@@ -66,23 +63,18 @@ public class MapGenerator : MonoBehaviour
     GameObject tempObj;
 
     private List<ChunkData> chunkDataList = new List<ChunkData>();
-
-    int lastChunksPerRow = 0;
     float startTime3;
 
     private List<PerlinNoise> layerNoises = new List<PerlinNoise>();
 
     // temps
-
     private Mesh tempMesh;
     int[] tempTriangleList;
     Vector2[] tempUvList;
     Vector3[] tempVertices;
-
     float[,] tempNoiseValues;
     float[,] tempNoiseValues2;
     float[,] tempNoiseValues3;
-
     float currentVertHeight;
 
     int[,] chunksGeneratedCheck;
@@ -136,23 +128,36 @@ public class MapGenerator : MonoBehaviour
         float startTime = Time.realtimeSinceStartup;
 
         // Jobs
-        falloffMap = falloffGenerator.GenerateFalloffMapCircle(_mapSize + chunksPerRow, _mapSize + chunksPerRow, fallOffValueA, fallOffValueB);
+        falloffMap = falloffGenerator.GenerateFalloffMapCircle(_mapSize + chunksPerRow, _mapSize + chunksPerRow, fallOffValueA, fallOffValueB); // complete map falloff map
         Debug.Log("instantiating 'complete map falloffMap' took: " + ((Time.realtimeSinceStartup - startTime) * 1000f) + "ms");
         float startTime2 = Time.realtimeSinceStartup;
         tempTriangleList = GetTriangleList(_chunkSize); // Triangle indeces are the same for every chunk
         tempUvList = GetUVList(_chunkSize); // UV lists are the same for every chunk
 
+        
+
+
         // No jobs yet
         GenerateChunkDataNaked(_mapSize, _chunkSize, tempTriangleList, tempUvList);
-
-
         Debug.Log("Generating chunk data without vertices: " + ((Time.realtimeSinceStartup - startTime2) * 1000f) + "ms");
-        
-       
 
+
+
+        for (int i = 0, z = 0; z < (_mapSize / _chunkSize); z++)
+        {
+            for (int x = 0; x < (_mapSize / _chunkSize); x++)
+            {
+                ChunkData data = chunkDataList.ElementAt(i);
+                //chunkDataList[i].trianglesOld = tempTriangleList;
+                data.verticesOld = AddChunkVerticesToChunkData(data.terrainWorldPosition, _mapSize, _chunkSize);
+                chunkDataList.RemoveAt(i);
+                chunkDataList.Insert(i, data);
+                i++;
+            }
+        }
         Debug.Log("Generating complete chunk data: " + ((Time.realtimeSinceStartup - startTime2) * 1000f) + "ms");
+        
         startTime3 = Time.realtimeSinceStartup;
-
         StartCoroutine(GenerateChunkObjects());
     }
 
@@ -168,48 +173,26 @@ public class MapGenerator : MonoBehaviour
                 chunkData.trianglesOld = tempTriangleList;
                 chunkData.uvs = tempUvList;
                 chunkData.terrainWorldPosition = new Vector2Int(x * chunkSize, z * chunkSize);
-                chunkData.verticesOld = AddChunkVerticesToChunkData(chunkData, mapSize, chunkSize);
                 chunkDataList.Add(chunkData);
                 i++;
             }
         }
     }
 
-    private Vector3[] AddChunkVerticesToChunkData(ChunkData chunkData, int mapSize, int chunkSize)
+    private ChunkData AddJunkVertices(ChunkData currentJunkData, int mapSize, int chunkSize)
     {
-        Vector3[] verticesOld = GetChunkVertices(chunkData.terrainWorldPosition, chunkSize);
+        currentJunkData.verticesOld = AddChunkVerticesToChunkData(currentJunkData.terrainWorldPosition, mapSize, chunkSize);
+        return currentJunkData;
+    }
+                
+
+    private Vector3[] AddChunkVerticesToChunkData(Vector2Int chunkDataTerrainWorldPosition, int mapSize, int chunkSize)
+    {
+        Vector3[] verticesOld = GetChunkVertices(chunkDataTerrainWorldPosition, chunkSize);
         return verticesOld;
     }
 
-    private IEnumerator GenerateChunkObjects()
-    {
-        //SetMapToGround(minMapHeight);
-
-
-        foreach (ChunkData chunkData in chunkDataList)
-        {
-            float startTime = Time.realtimeSinceStartup;
-            GameObject terrainChunk = Instantiate(terrainChunkPrefab);
-
-            tempMesh = new Mesh();
-            tempMesh.SetVertices(chunkData.verticesOld);
-            tempMesh.SetTriangles(chunkData.trianglesOld, 0);
-            tempMesh.SetUVs(0, chunkData.uvs);
-            tempMesh.RecalculateNormals();
-
-            terrainChunk.GetComponent<MeshRenderer>().sharedMaterial = terrainMaterial;
-            terrainChunk.GetComponent<MeshFilter>().mesh = tempMesh;
-            terrainChunk.GetComponent<MeshCollider>().sharedMesh = tempMesh;
-            
-
-
-            terrainChunk.transform.SetParent(gameWorld.transform);
-            terrainChunk.transform.position = new Vector3(chunkData.terrainWorldPosition.x, 0, chunkData.terrainWorldPosition.y);
-            yield return null;
-        }
-
-        Debug.Log("Generating chunk objects took: " + ((Time.realtimeSinceStartup - startTime3) * 1000f) + "ms");
-    }
+    
 
 
     [BurstCompile]
@@ -258,6 +241,36 @@ public class MapGenerator : MonoBehaviour
                 data.verticesOld[i] = new Vector3(data.verticesOld[i].x, data.verticesOld[i].y - minHeight, data.verticesOld[i].z);
             }
         }
+    }
+
+    private IEnumerator GenerateChunkObjects()
+    {
+        //SetMapToGround(minMapHeight);
+
+
+        foreach (ChunkData chunkData in chunkDataList)
+        {
+            float startTime = Time.realtimeSinceStartup;
+            GameObject terrainChunk = Instantiate(terrainChunkPrefab);
+
+            tempMesh = new Mesh();
+            tempMesh.SetVertices(chunkData.verticesOld);
+            tempMesh.SetTriangles(chunkData.trianglesOld, 0);
+            tempMesh.SetUVs(0, chunkData.uvs);
+            tempMesh.RecalculateNormals();
+
+            terrainChunk.GetComponent<MeshRenderer>().sharedMaterial = terrainMaterial;
+            terrainChunk.GetComponent<MeshFilter>().mesh = tempMesh;
+            terrainChunk.GetComponent<MeshCollider>().sharedMesh = tempMesh;
+
+
+
+            terrainChunk.transform.SetParent(gameWorld.transform);
+            terrainChunk.transform.position = new Vector3(chunkData.terrainWorldPosition.x, 0, chunkData.terrainWorldPosition.y);
+            yield return null;
+        }
+
+        Debug.Log("Generating chunk objects took: " + ((Time.realtimeSinceStartup - startTime3) * 1000f) + "ms");
     }
 
     [BurstCompile]
