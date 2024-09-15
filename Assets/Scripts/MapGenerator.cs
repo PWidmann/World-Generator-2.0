@@ -47,22 +47,23 @@ public class MapGenerator : MonoBehaviour
     [SerializeField] private int _chunkSize = 200;
     [SerializeField] private GameObject gameWorld;
     [SerializeField] private Material terrainMaterial;
-    [SerializeField] private Material waterMaterial;
     [SerializeField] private AnimationCurve terrainAnimCurve;
     [SerializeField] private GameObject terrainChunkPrefab;
     [SerializeField] private NoiseLayer[] noiseLayers;
     [SerializeField] private float fallOffValueA = 3;
     [SerializeField] private float fallOffValueB = 2.2f;
     [SerializeField] private Transform startPosition;
-    [SerializeField] private int worldBorderDistance = 1000;
     [SerializeField] private int worldBorderDistanceBottom = 100;
+    [SerializeField] private GameObject waterObject;
+    [SerializeField] private InputField mapSizeUITInput;
+    [SerializeField] private Text genTimeText;
 
     private int chunksPerRow;
     private PerlinNoise[] noises;
     private float[,] falloffMap;
-    float minMapHeight = 1000;
-    float maxMapHeight = 0;
-
+    private float minMapHeight = 1000;
+    private float maxMapHeight = 0;
+    private int worldBorderDistance = 1000;
     private List<GameObject> chunks = new List<GameObject>();
     private List<PerlinNoise> layerNoises = new List<PerlinNoise>();
     private List<ChunkData> chunkDataList = new List<ChunkData>();
@@ -79,12 +80,15 @@ public class MapGenerator : MonoBehaviour
     private int[,] chunksGeneratedCheck;
     private List<NativeArray<Vector3>> terrainVerts = new List<NativeArray<Vector3>>();
     private FalloffGenerator falloffGenerator = new FalloffGenerator();
-
     private List<Mesh> waterMeshes = new List<Mesh>();
+
+    float startTime;
+    float totalGentime;
 
     private void Start()
     {
-        GenerateNewMap();
+        //GenerateNewMap();
+        startTime = Time.realtimeSinceStartup;
     }
 
     private void Update()
@@ -98,29 +102,12 @@ public class MapGenerator : MonoBehaviour
     [BurstCompile]
     public void GenerateNewMap()
     {
-        waterMeshes.Clear();
-        chunkDataList.Clear();
-        worldMiddlePoint = new Vector3(_mapSize / 2, 0, _mapSize / 2);
-        worldBorderDistance = (_mapSize / 2) - 4;
+        PrepareNewMap();
+        
 
-
-
-        foreach (Transform t in gameWorld.transform)
-        {
-            Destroy(t.gameObject);
-        }
-
-        //GenerateWater();
 
         chunksPerRow = _mapSize / _chunkSize;
-        chunksGeneratedCheck = new int[chunksPerRow, chunksPerRow];
-        for (int x = 0; x < chunksGeneratedCheck.GetLength(0); x++)
-        {
-            for (int y = 0; y < chunksGeneratedCheck.GetLength(1); y++)
-            {
-                chunksGeneratedCheck[x, y] = 0;
-            }
-        }
+        
 
         layerNoises.Clear();
 
@@ -167,32 +154,24 @@ public class MapGenerator : MonoBehaviour
 
     }
 
-    private void GenerateWater()
+    private void PrepareNewMap()
     {
-        WaterGenerator waterGenerator = new(_mapSize, _chunkSize, worldBorderDistance);
-        waterMeshes = waterGenerator.GetWaterChunkMeshes();
+        _mapSize = Convert.ToInt16(mapSizeUITInput.text);
+        waterMeshes.Clear();
+        chunkDataList.Clear();
+        worldMiddlePoint = new Vector3(_mapSize / 2, 0, _mapSize / 2);
+        worldBorderDistance = (_mapSize / 2) - 4;
+        waterObject.transform.position = new Vector3(worldMiddlePoint.x, 0.8f, worldMiddlePoint.z);
+        float scale2k = 19.93f;
+        scale2k = (_mapSize / 2000f) * scale2k;
+        waterObject.transform.localScale = new Vector3(scale2k, 1, scale2k);
+        waterObject.SetActive(true);
+        genTimeText.text = "";
+        startTime = Time.realtimeSinceStartup;
 
-        GameObject waterObject = new GameObject("Water");
-        waterObject.transform.SetParent(transform);
-
-        GameObject tempObj;
-
-        
-
-        int i = 0;
-        for (int x = 0; x < chunksPerRow; x++)
+        foreach (Transform t in gameWorld.transform)
         {
-            for (int y = 0; y < chunksPerRow; y++)
-            {
-                tempObj = new GameObject("WaterChunk");
-                tempObj.transform.SetParent(waterObject.transform);
-
-                tempObj.AddComponent<MeshRenderer>().sharedMaterial = waterMaterial;
-                tempObj.AddComponent<MeshFilter>().sharedMesh = waterMeshes[i];
-                tempObj.transform.position = new Vector3(x * _chunkSize, y * _chunkSize);
-
-                i++;
-            }
+            Destroy(t.gameObject);
         }
     }
 
@@ -306,10 +285,12 @@ public class MapGenerator : MonoBehaviour
 
             terrainChunk.transform.SetParent(gameWorld.transform);
             terrainChunk.transform.position = new Vector3(chunkData.terrainWorldPosition.x, 0, chunkData.terrainWorldPosition.y);
+
             yield return null;
         }
 
-        Debug.Log("Generating chunk objects took: " + ((Time.realtimeSinceStartup - startTime3) * 1000f) + "ms");
+        totalGentime = Time.realtimeSinceStartup - startTime;
+        genTimeText.text = "Generation time: " + totalGentime.ToString("0.00") + " s";
     }
 
     [BurstCompile]
