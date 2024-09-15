@@ -8,7 +8,6 @@ using System;
 public class PerlinNoise
 {
     private int seed;
-
     private float frequency;
     private float amplitude;
     private float lacunarity; // gaps between patterns / lakes
@@ -19,9 +18,8 @@ public class PerlinNoise
 
 
 
-    public PerlinNoise(int seed, float frequency, float amplitude, float lacunarity, float persistance, int octaves)
+    public PerlinNoise(float frequency, float amplitude, float lacunarity, float persistance, int octaves)
     {
-        this.seed = seed;
         this.frequency = frequency;
         this.amplitude = amplitude;
         this.lacunarity = lacunarity;
@@ -35,7 +33,8 @@ public class PerlinNoise
     /// <summary>
     /// Gets called per chunk
     /// </summary>
-    public float[,] GetNoiseValues(int xPos, int yPos, int chunkSize, float scale)
+   
+    public float[,] GetNoiseValues(int xPos, int yPos, int chunkSize, float scale, int seed)
     {
         float[,] noiseValues = new float[chunkSize + 1, chunkSize + 1];
 
@@ -70,14 +69,8 @@ public class PerlinNoise
                 {
                     minVal = noiseValues[x, y];
                 }
-            }
-        }
 
-        for (int i = 0; i < noiseValues.GetLength(0); i++)
-        {
-            for (int j = 0; j < noiseValues.GetLength(1); j++)
-            {
-                noiseValues[i, j] = Mathf.InverseLerp(8, 0, noiseValues[i, j]);
+                noiseValues[x, y] = Mathf.InverseLerp(8, 0, noiseValues[x, y]);
             }
         }
 
