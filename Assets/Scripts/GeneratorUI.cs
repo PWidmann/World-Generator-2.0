@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class GeneratorUI : MonoBehaviour
 {
-    [SerializeField] MapGenerator mapGenerator;
+    private MapGenerator mapGenerator;
 
     void Start()
     {
@@ -14,5 +14,13 @@ public class GeneratorUI : MonoBehaviour
     public void CreateButton()
     {
         mapGenerator.GenerateNewMap();
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyUp(KeyCode.Escape))
+        {
+            Application.Quit();
+        }
     }
 }

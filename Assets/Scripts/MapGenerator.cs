@@ -55,8 +55,9 @@ public class MapGenerator : MonoBehaviour
     [SerializeField] private Transform startPosition;
     [SerializeField] private int worldBorderDistanceBottom = 100;
     [SerializeField] private GameObject waterObject;
-    [SerializeField] private InputField mapSizeUITInput;
+    [SerializeField] private InputField mapSizeUIInput;
     [SerializeField] private Text genTimeText;
+    [SerializeField] private Button genButton;
 
     private int chunksPerRow;
     private PerlinNoise[] noises;
@@ -102,15 +103,9 @@ public class MapGenerator : MonoBehaviour
     [BurstCompile]
     public void GenerateNewMap()
     {
+        if (Convert.ToInt16(mapSizeUIInput.text) % _chunkSize != 0) return;
+
         PrepareNewMap();
-        
-
-
-        chunksPerRow = _mapSize / _chunkSize;
-        
-
-        layerNoises.Clear();
-
 
         foreach (NoiseLayer layer in noiseLayers)
         {
@@ -154,9 +149,10 @@ public class MapGenerator : MonoBehaviour
 
     }
 
+    [BurstCompile]
     private void PrepareNewMap()
     {
-        _mapSize = Convert.ToInt16(mapSizeUITInput.text);
+        _mapSize = Convert.ToInt16(mapSizeUIInput.text);
         waterMeshes.Clear();
         chunkDataList.Clear();
         worldMiddlePoint = new Vector3(_mapSize / 2, 0, _mapSize / 2);
@@ -168,6 +164,9 @@ public class MapGenerator : MonoBehaviour
         waterObject.SetActive(true);
         genTimeText.text = "";
         startTime = Time.realtimeSinceStartup;
+        genButton.enabled = false;
+        chunksPerRow = _mapSize / _chunkSize;
+        layerNoises.Clear();
 
         foreach (Transform t in gameWorld.transform)
         {
@@ -263,9 +262,6 @@ public class MapGenerator : MonoBehaviour
     [BurstCompile]
     private IEnumerator GenerateChunkObjects()
     {
-        //SetMapToGround(minMapHeight);
-
-
         foreach (ChunkData chunkData in chunkDataList)
         {
             float startTime = Time.realtimeSinceStartup;
@@ -291,6 +287,7 @@ public class MapGenerator : MonoBehaviour
 
         totalGentime = Time.realtimeSinceStartup - startTime;
         genTimeText.text = "Generation time: " + totalGentime.ToString("0.00") + " s";
+        genButton.enabled = true;
     }
 
     [BurstCompile]

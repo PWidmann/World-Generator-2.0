@@ -361,7 +361,7 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.3
-  far clip plane: 5000
+  far clip plane: 10000
   field of view: 60
   orthographic: 0
   orthographic size: 5
@@ -388,8 +388,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.35172367, y: -0.31574136, z: 0.12735999, w: -0.8719962}
-  m_LocalPosition: {x: -97.82199, y: 1828.4722, z: -20.365446}
+  m_LocalRotation: {x: 0.07980864, y: 0.46386448, z: -0.042002443, w: 0.8813036}
+  m_LocalPosition: {x: -160.70444, y: 238.79839, z: 215.44685}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -609,8 +609,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -68.499954, y: -8.2}
-  m_SizeDelta: {x: 160, y: 30}
+  m_AnchoredPosition: {x: -75.8, y: -6.2}
+  m_SizeDelta: {x: 128.0212, y: 42.9534}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &469641567
 MonoBehaviour:
@@ -645,7 +645,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Map size in meter
+  m_Text: Map size in meter (multiple of 200)
 --- !u!222 &469641568
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -690,8 +690,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -4.284, y: -15.236006}
-  m_SizeDelta: {x: 168.568, y: 23.128}
+  m_AnchoredPosition: {x: 1.0758, y: -18.9}
+  m_SizeDelta: {x: 184.1342, y: 23.128}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &519691143
 MonoBehaviour:
@@ -706,7 +706,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Navigation:
-    m_Mode: 3
+    m_Mode: 0
     m_WrapAround: 0
     m_SelectOnUp: {fileID: 0}
     m_SelectOnDown: {fileID: 0}
@@ -714,11 +714,11 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_NormalColor: {r: 0.4433962, g: 0.4433962, b: 0.4433962, a: 1}
+    m_HighlightedColor: {r: 0.6415094, g: 0.6415094, b: 0.6415094, a: 1}
+    m_PressedColor: {r: 0.3584906, g: 0.3584906, b: 0.3584906, a: 1}
+    m_SelectedColor: {r: 0.4339623, g: 0.4339623, b: 0.4339623, a: 1}
+    m_DisabledColor: {r: 0.4339623, g: 0.4339623, b: 0.4339623, a: 0.5019608}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
@@ -762,7 +762,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.6226415, g: 0.6226415, b: 0.6226415, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -957,8 +957,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.00013638, y: 44.5112}
-  m_SizeDelta: {x: 204, y: 25.99}
+  m_AnchoredPosition: {x: 12, y: 54.2}
+  m_SizeDelta: {x: 192.99, y: 25.99}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &779647982
 MonoBehaviour:
@@ -1232,7 +1232,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   randomSeed: 1
   seed: 1337
-  _mapSize: 4000
+  _mapSize: 2000
   _chunkSize: 200
   gameWorld: {fileID: 307802628}
   terrainMaterial: {fileID: 2100000, guid: 2d4819a60b51c2f4eac4a7f15b7ed14c, type: 2}
@@ -1441,8 +1441,9 @@ MonoBehaviour:
   startPosition: {fileID: 618889440}
   worldBorderDistanceBottom: 100
   waterObject: {fileID: 3980366327098392701}
-  mapSizeUITInput: {fileID: 1498000188}
+  mapSizeUIInput: {fileID: 1498000188}
   genTimeText: {fileID: 779647982}
+  genButton: {fileID: 519691143}
 --- !u!4 &1419373294
 Transform:
   m_ObjectHideFlags: 0
@@ -1826,10 +1827,10 @@ RectTransform:
   - {fileID: 779647981}
   m_Father: {fileID: 1532355439}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 101.99872, y: 31.19806}
-  m_SizeDelta: {x: 203.9975, y: 62.39612}
+  m_AnchorMin: {x: 0.5, y: 0}
+  m_AnchorMax: {x: 0.5, y: 0}
+  m_AnchoredPosition: {x: -174.9, y: 37.213318}
+  m_SizeDelta: {x: 204.4023, y: 74.4268}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1542029603
 MonoBehaviour:
@@ -1844,7 +1845,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 0.392}
+  m_Color: {r: 0, g: 0, b: 0, a: 0.53333336}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1881,7 +1882,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 21fc14b2d103b954d96451adf9cb8d97, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mapGenerator: {fileID: 0}
 --- !u!1 &1752658419
 GameObject:
   m_ObjectHideFlags: 0
@@ -1932,7 +1932,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.19607843, g: 0.19607843, b: 0.19607843, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
