@@ -7,7 +7,7 @@ using UnityEngine;
 
 public class FalloffGenerator
 {
-    public float[,] GenerateFalloffMapCircle(int width, int height, float falloffValue_a, float falloffValue_b)
+    public float[,] GenerateFalloffMapCircle(int width, int height)
     {
         // Flattened 2D array as a NativeArray<float>
         NativeArray<float> falloffMap = new NativeArray<float>(width * height, Allocator.TempJob);
@@ -17,8 +17,6 @@ public class FalloffGenerator
         {
             width = width,
             height = height,
-            falloffValue_a = falloffValue_a,
-            falloffValue_b = falloffValue_b,
             falloffMap = falloffMap
         };
 
@@ -46,8 +44,6 @@ public class FalloffGenerator
     {
         public int width;
         public int height;
-        public float falloffValue_a;
-        public float falloffValue_b;
 
         [WriteOnly]
         public NativeArray<float> falloffMap;

@@ -41,23 +41,25 @@ public struct NoiseLayer
 public class MapGenerator : MonoBehaviour
 {
     [Header("Map Settings")]
+    [SerializeField] bool noColliders = true;
     [SerializeField] private bool randomSeed = true;
     [SerializeField] private int seed = 1337;
     [SerializeField] private int _mapSize = 2000;
     [SerializeField] private int _chunkSize = 200;
+    [SerializeField] private AnimationCurve terrainAnimCurve;
+    [SerializeField] private NoiseLayer[] noiseLayers;
+    
+    [Header("References")]
     [SerializeField] private GameObject gameWorld;
     [SerializeField] private Material terrainMaterial;
-    [SerializeField] private AnimationCurve terrainAnimCurve;
     [SerializeField] private GameObject terrainChunkPrefab;
-    [SerializeField] private NoiseLayer[] noiseLayers;
-    [SerializeField] private float fallOffValueA = 3;
-    [SerializeField] private float fallOffValueB = 2.2f;
+    [SerializeField] private GameObject terrainChunkPrefabNoCollider;
     [SerializeField] private Transform startPosition;
-    [SerializeField] private int worldBorderDistanceBottom = 100;
     [SerializeField] private GameObject waterObject;
     [SerializeField] private InputField mapSizeUIInput;
     [SerializeField] private Text genTimeText;
     [SerializeField] private Button genButton;
+    [SerializeField] private Toggle colliderToggle;
 
     private int chunksPerRow;
     private PerlinNoise[] noises;
@@ -67,7 +69,6 @@ public class MapGenerator : MonoBehaviour
     private int worldBorderDistance = 1000;
     private List<GameObject> chunks = new List<GameObject>();
     private List<PerlinNoise> layerNoises = new List<PerlinNoise>();
-    private List<ChunkData> chunkDataList = new List<ChunkData>();
     private Vector3 worldMiddlePoint;
     private Mesh tempMesh;
     private int[] tempTriangleList;
@@ -82,9 +83,10 @@ public class MapGenerator : MonoBehaviour
     private List<NativeArray<Vector3>> terrainVerts = new List<NativeArray<Vector3>>();
     private FalloffGenerator falloffGenerator = new FalloffGenerator();
     private List<Mesh> waterMeshes = new List<Mesh>();
-
-    float startTime;
-    float totalGentime;
+    private List<ChunkData> chunkDataList = new List<ChunkData>();
+    private Queue<ChunkData> finalChunkDataList = new Queue<ChunkData>();
+    private float startTime;
+    private float totalGentime;
 
     private void Start()
     {
@@ -98,55 +100,79 @@ public class MapGenerator : MonoBehaviour
         {
             GenerateNewMap();
         }
+
+        StartCoroutine(CreatePreparedChunks());
+    }
+
+    [BurstCompile]
+    private IEnumerator CreatePreparedChunks()
+    {
+        if (finalChunkDataList.Count > 0)
+        {
+            ChunkData data = finalChunkDataList.Dequeue();
+
+            GenerateChunkObjects(data);
+
+            if (data.chunkID == (chunksPerRow * chunksPerRow) - 1)
+            {
+                totalGentime = Time.realtimeSinceStartup - startTime;
+                genTimeText.text = "Generation time: " + totalGentime.ToString("0.00") + " s";
+                genButton.enabled = true;
+            }
+        }
+
+        yield return null;
     }
 
     [BurstCompile]
     public void GenerateNewMap()
     {
         if (Convert.ToInt16(mapSizeUIInput.text) % _chunkSize != 0) return;
+        if (randomSeed) seed = UnityEngine.Random.Range(0, 10000);
+
+        float startTime = Time.realtimeSinceStartup;
 
         PrepareNewMap();
 
+        // Jobs
+        falloffMap = falloffGenerator.GenerateFalloffMapCircle(_mapSize + chunksPerRow, _mapSize + chunksPerRow); // complete map falloff map
+        tempTriangleList = GetTriangleList(_chunkSize); // Triangle indices are the same for every chunk
+        tempUvList = GetUVList(_chunkSize); // UV lists are the same for every chunk
+
+        // No jobs yet
+        CreateNoiseLayers();
+        GenerateChunkDataNaked(_mapSize, _chunkSize, tempTriangleList, tempUvList);
+        StartCoroutine(FillFinalChunkData());
+    }
+
+    [BurstCompile]
+    private void CreateNoiseLayers()
+    {
         foreach (NoiseLayer layer in noiseLayers)
         {
             PerlinNoise noise = new PerlinNoise(layer.frequency, layer.amplitude, layer.lacunarity, layer.persistance, layer.octaves);
             layerNoises.Add(noise);
 
         }
+    }
 
-        float startTime = Time.realtimeSinceStartup;
-
-        // Jobs
-        falloffMap = falloffGenerator.GenerateFalloffMapCircle(_mapSize + chunksPerRow, _mapSize + chunksPerRow, fallOffValueA, fallOffValueB); // complete map falloff map
-        Debug.Log("instantiating 'complete map falloffMap' took: " + ((Time.realtimeSinceStartup - startTime) * 1000f) + "ms");
-        float startTime2 = Time.realtimeSinceStartup;
-        tempTriangleList = GetTriangleList(_chunkSize); // Triangle indeces are the same for every chunk
-        tempUvList = GetUVList(_chunkSize); // UV lists are the same for every chunk
-
-        // No jobs yet
-        GenerateChunkDataNaked(_mapSize, _chunkSize, tempTriangleList, tempUvList);
-        Debug.Log("Generating chunk data without vertices: " + ((Time.realtimeSinceStartup - startTime2) * 1000f) + "ms");
-
-        if (randomSeed) seed = UnityEngine.Random.Range(0, 10000);
-
-        for (int i = 0, z = 0; z < (_mapSize / _chunkSize); z++)
+    [BurstCompile]
+    private IEnumerator FillFinalChunkData()
+    {
+        for (int i = 0, z = 0; z < chunksPerRow; z++)
         {
-            for (int x = 0; x < (_mapSize / _chunkSize); x++)
+            for (int x = 0; x < chunksPerRow; x++)
             {
                 ChunkData data = chunkDataList.ElementAt(i);
                 data.verticesOld = GetChunkVertices(data.terrainWorldPosition, _chunkSize);
-                chunkDataList.RemoveAt(i);
-                chunkDataList.Insert(i, data);
+                finalChunkDataList.Enqueue(data);
                 i++;
+
+                yield return null;
             }
         }
 
-        Debug.Log("Generating complete chunk data: " + ((Time.realtimeSinceStartup - startTime2) * 1000f) + "ms");
-
-        startTime3 = Time.realtimeSinceStartup;
-        StartCoroutine(GenerateChunkObjects());
-
-
+        
     }
 
     [BurstCompile]
@@ -155,6 +181,7 @@ public class MapGenerator : MonoBehaviour
         _mapSize = Convert.ToInt16(mapSizeUIInput.text);
         waterMeshes.Clear();
         chunkDataList.Clear();
+        finalChunkDataList.Clear();
         worldMiddlePoint = new Vector3(_mapSize / 2, 0, _mapSize / 2);
         worldBorderDistance = (_mapSize / 2) - 4;
         waterObject.transform.position = new Vector3(worldMiddlePoint.x, 0.8f, worldMiddlePoint.z);
@@ -167,6 +194,7 @@ public class MapGenerator : MonoBehaviour
         genButton.enabled = false;
         chunksPerRow = _mapSize / _chunkSize;
         layerNoises.Clear();
+        noColliders = colliderToggle.isOn ? false : true;
 
         foreach (Transform t in gameWorld.transform)
         {
@@ -208,50 +236,7 @@ public class MapGenerator : MonoBehaviour
         {
             for (int x = 0; x <= chunkSize; x++)
             {
-                currentVertHeight = tempNoiseValues[x, z];
-                currentVertHeight = Mathf.Clamp01(currentVertHeight - falloffMap[terrainWorldPosition.x + x, terrainWorldPosition.y + z]);
-                currentVertHeight *= tempNoiseValues2[x, z];
-                
-                //currentVertHeight -= tempNoiseValues2[x, z];
-                currentVertHeight = terrainAnimCurve.Evaluate(currentVertHeight) * (noiseLayers[0].heightScale);
-                currentVertHeight *= tempNoiseValues[x, z];
-
-
-                // Border generation
-                Vector3 vertextWorldPos = new Vector3(worldChunkPos.x + x, 0, worldChunkPos.y + z);
-                float distance = Vector3.Distance(vertextWorldPos, worldMiddlePoint);
-
-                if (distance <= worldBorderDistance)
-                {
-                    
-                    if (currentVertHeight < minMapHeight) minMapHeight = currentVertHeight;
-                    if (currentVertHeight > maxMapHeight) maxMapHeight = currentVertHeight;
-                    tempVertices[i] = new Vector3(x, currentVertHeight, z);
-                    
-                }
-                if (distance > worldBorderDistance)
-                {
-                    
-                    Vector3 toWardsMiddle = worldMiddlePoint - vertextWorldPos;
-                    float distanceVertexToBorder = distance - worldBorderDistance;
-                    
-
-                    if (distance < worldBorderDistance + 2) tempVertices[i] = new Vector3(x, 1f, z);
-                    else
-                    {
-                        if (distance >= worldBorderDistance + 2)
-                        {
-                            tempVertices[i] = new Vector3(x, 0 - distanceVertexToBorder, z);
-                        }
-
-                        if (distance >= worldBorderDistance + 3.5f)
-                        {
-                            Vector3 wasPos = tempVertices[i] = new Vector3(x, -3.5f, z);
-                            tempVertices[i] = wasPos + toWardsMiddle.normalized * distanceVertexToBorder;
-                        }
-                    }
-                }
-
+                ChunkVerticesCreation(terrainWorldPosition, worldChunkPos, i, z, x);
                 i++;
             }
         }
@@ -259,35 +244,69 @@ public class MapGenerator : MonoBehaviour
         return tempVertices;
     }
 
-    [BurstCompile]
-    private IEnumerator GenerateChunkObjects()
+    private void ChunkVerticesCreation(Vector2Int terrainWorldPosition, Vector2 worldChunkPos,  int i, int z, int x)
     {
-        foreach (ChunkData chunkData in chunkDataList)
+        currentVertHeight = tempNoiseValues[x, z];
+        currentVertHeight = Mathf.Clamp01(currentVertHeight - falloffMap[terrainWorldPosition.x + x, terrainWorldPosition.y + z]);
+        currentVertHeight *= tempNoiseValues2[x, z];
+
+        //currentVertHeight -= tempNoiseValues2[x, z];
+        currentVertHeight = terrainAnimCurve.Evaluate(currentVertHeight) * (noiseLayers[0].heightScale);
+        currentVertHeight *= tempNoiseValues[x, z];
+
+
+        // Border generation
+        Vector3 vertextWorldPos = new Vector3(worldChunkPos.x + x, 0, worldChunkPos.y + z);
+        float distance = Vector3.Distance(vertextWorldPos, worldMiddlePoint);
+
+        if (distance <= worldBorderDistance)
         {
-            float startTime = Time.realtimeSinceStartup;
-            GameObject terrainChunk = Instantiate(terrainChunkPrefab);
 
-            tempMesh = new Mesh();
-            tempMesh.SetVertices(chunkData.verticesOld);
-            tempMesh.SetTriangles(chunkData.trianglesOld, 0);
-            tempMesh.SetUVs(0, chunkData.uvs);
-            tempMesh.RecalculateNormals();
+            if (currentVertHeight < minMapHeight) minMapHeight = currentVertHeight;
+            if (currentVertHeight > maxMapHeight) maxMapHeight = currentVertHeight;
+            tempVertices[i] = new Vector3(x, currentVertHeight, z);
 
-            terrainChunk.GetComponent<MeshRenderer>().sharedMaterial = terrainMaterial;
-            terrainChunk.GetComponent<MeshFilter>().mesh = tempMesh;
-            terrainChunk.GetComponent<MeshCollider>().sharedMesh = tempMesh;
-
-
-
-            terrainChunk.transform.SetParent(gameWorld.transform);
-            terrainChunk.transform.position = new Vector3(chunkData.terrainWorldPosition.x, 0, chunkData.terrainWorldPosition.y);
-
-            yield return null;
         }
+        if (distance > worldBorderDistance)
+        {
 
-        totalGentime = Time.realtimeSinceStartup - startTime;
-        genTimeText.text = "Generation time: " + totalGentime.ToString("0.00") + " s";
-        genButton.enabled = true;
+            Vector3 toWardsMiddle = worldMiddlePoint - vertextWorldPos;
+            float distanceVertexToBorder = distance - worldBorderDistance;
+
+
+            if (distance < worldBorderDistance + 2) tempVertices[i] = new Vector3(x, 1f, z);
+            else
+            {
+                if (distance >= worldBorderDistance + 2)
+                {
+                    tempVertices[i] = new Vector3(x, 0 - distanceVertexToBorder, z);
+                }
+
+                if (distance >= worldBorderDistance + 3.5f)
+                {
+                    Vector3 wasPos = tempVertices[i] = new Vector3(x, -3.5f, z);
+                    tempVertices[i] = wasPos + toWardsMiddle.normalized * distanceVertexToBorder;
+                }
+            }
+        }
+    }
+
+    [BurstCompile]
+    private void GenerateChunkObjects(ChunkData chunkData)
+    {
+        GameObject terrainChunk = noColliders? Instantiate(terrainChunkPrefabNoCollider) : Instantiate(terrainChunkPrefab);
+
+        tempMesh = new Mesh();
+        tempMesh.SetVertices(chunkData.verticesOld);
+        tempMesh.SetTriangles(chunkData.trianglesOld, 0);
+        tempMesh.SetUVs(0, chunkData.uvs);
+        tempMesh.RecalculateNormals();
+
+        terrainChunk.GetComponent<MeshRenderer>().sharedMaterial = terrainMaterial;
+        terrainChunk.GetComponent<MeshFilter>().mesh = tempMesh;
+        if (!noColliders) terrainChunk.GetComponent<MeshCollider>().sharedMesh = tempMesh;
+        terrainChunk.transform.SetParent(gameWorld.transform);
+        terrainChunk.transform.position = new Vector3(chunkData.terrainWorldPosition.x, 0, chunkData.terrainWorldPosition.y);
     }
 
     [BurstCompile]
