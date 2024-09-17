@@ -16,10 +16,10 @@ using UnityEngine.UI;
 public struct ChunkData
 {
     public int chunkID;
-    public Vector3[] verticesOld;
+    public float3[] verticesOld;
     public int[] trianglesOld;
-    public Vector2[] uvs;
-    public Vector2Int terrainWorldPosition;
+    public float2[] uvs;
+    public int2 terrainWorldPosition;
     public NativeArray<Vector3> chunkVertices;
 }
 
@@ -69,11 +69,11 @@ public class MapGenerator : MonoBehaviour
     private int worldBorderDistance = 1000;
     private List<GameObject> chunks = new List<GameObject>();
     private List<PerlinNoise> layerNoises = new List<PerlinNoise>();
-    private Vector3 worldMiddlePoint;
+    private float3 worldMiddlePoint;
     private Mesh tempMesh;
     private int[] tempTriangleList;
-    private Vector2[] tempUvList;
-    private Vector3[] tempVertices;
+    private float2[] tempUvList;
+    private float3[] tempVertices;
     private float[,] tempNoiseValues;
     private float[,] tempNoiseValues2;
     private float[,] tempNoiseValues3;
@@ -81,7 +81,6 @@ public class MapGenerator : MonoBehaviour
     private float currentVertHeight;
     private int[,] chunksGeneratedCheck;
     private List<NativeArray<Vector3>> terrainVerts = new List<NativeArray<Vector3>>();
-    private FalloffGenerator falloffGenerator = new FalloffGenerator();
     private List<Mesh> waterMeshes = new List<Mesh>();
     private List<ChunkData> chunkDataList = new List<ChunkData>();
     private Queue<ChunkData> finalChunkDataList = new Queue<ChunkData>();
@@ -111,7 +110,7 @@ public class MapGenerator : MonoBehaviour
         {
             ChunkData data = finalChunkDataList.Dequeue();
 
-            GenerateChunkObjects(data);
+            GenerateChunkGO(data);
 
             if (data.chunkID == (chunksPerRow * chunksPerRow) - 1)
             {
@@ -135,9 +134,9 @@ public class MapGenerator : MonoBehaviour
         PrepareNewMap();
 
         // Jobs
-        falloffMap = falloffGenerator.GenerateFalloffMapCircle(_mapSize + chunksPerRow, _mapSize + chunksPerRow); // complete map falloff map
-        tempTriangleList = GetTriangleList(_chunkSize); // Triangle indices are the same for every chunk
-        tempUvList = GetUVList(_chunkSize); // UV lists are the same for every chunk
+        falloffMap = Maptools.GenerateFalloffMapCircle(_mapSize + chunksPerRow); // complete map falloff map
+        tempUvList = Maptools.GetChunkUVList(_chunkSize); // UV lists are the same for every chunk
+        tempTriangleList = Maptools.GetChunkTriangleIndexList(_chunkSize); // Triangle indices are the same for every chunk
 
         // No jobs yet
         CreateNoiseLayers();
@@ -171,8 +170,6 @@ public class MapGenerator : MonoBehaviour
                 yield return null;
             }
         }
-
-        
     }
 
     [BurstCompile]
@@ -184,11 +181,6 @@ public class MapGenerator : MonoBehaviour
         finalChunkDataList.Clear();
         worldMiddlePoint = new Vector3(_mapSize / 2, 0, _mapSize / 2);
         worldBorderDistance = (_mapSize / 2) - 4;
-        waterObject.transform.position = new Vector3(worldMiddlePoint.x, 0.8f, worldMiddlePoint.z);
-        float scale2k = 19.93f;
-        scale2k = (_mapSize / 2000f) * scale2k;
-        waterObject.transform.localScale = new Vector3(scale2k, 1, scale2k);
-        waterObject.SetActive(true);
         genTimeText.text = "";
         startTime = Time.realtimeSinceStartup;
         genButton.enabled = false;
@@ -196,6 +188,12 @@ public class MapGenerator : MonoBehaviour
         layerNoises.Clear();
         noColliders = colliderToggle.isOn ? false : true;
 
+        // TODO: Water must be created/scaled properly
+        float scale2k = 19.93f;
+        scale2k = (_mapSize / 2000f) * scale2k;
+        waterObject.transform.position = new Vector3(worldMiddlePoint.x, 0.8f, worldMiddlePoint.z);
+        waterObject.SetActive(true);
+        waterObject.transform.localScale = new Vector3(scale2k, 1, scale2k);
         foreach (Transform t in gameWorld.transform)
         {
             Destroy(t.gameObject);
@@ -204,7 +202,7 @@ public class MapGenerator : MonoBehaviour
 
     [BurstCompile]
     // The whole map
-    private void GenerateChunkDataNaked(int mapSize, int chunkSize, int[] tempTriangleList, Vector2[] tempUvList)
+    private void GenerateChunkDataNaked(int mapSize, int chunkSize, int[] tempTriangleList, float2[] tempUvList)
     {
         for (int i = 0, z = 0; z < (mapSize / chunkSize); z++)
         {
@@ -214,7 +212,7 @@ public class MapGenerator : MonoBehaviour
                 chunkData.chunkID = i;
                 chunkData.trianglesOld = tempTriangleList;
                 chunkData.uvs = tempUvList;
-                chunkData.terrainWorldPosition = new Vector2Int(x * chunkSize, z * chunkSize);
+                chunkData.terrainWorldPosition = new int2(x * chunkSize, z * chunkSize);
                 chunkDataList.Add(chunkData);
                 i++;
             }
@@ -222,15 +220,15 @@ public class MapGenerator : MonoBehaviour
     }
 
     [BurstCompile]
-    private Vector3[] GetChunkVertices(Vector2Int terrainWorldPosition, int chunkSize)
+    private float3[] GetChunkVertices(int2 terrainWorldPosition, int chunkSize)
     {
-        tempVertices = new Vector3[(chunkSize + 1) * (chunkSize + 1)];
+        tempVertices = new float3[(chunkSize + 1) * (chunkSize + 1)];
         int2 chunkPos = new int2(terrainWorldPosition.x, terrainWorldPosition.y);
 
         tempNoiseValues = layerNoises[0].GetNoiseValues(chunkPos.x, chunkPos.y, chunkSize, noiseLayers[0].scale, seed);
         tempNoiseValues2 = layerNoises[1].GetNoiseValues(chunkPos.x, chunkPos.y, chunkSize, noiseLayers[1].scale, seed);
 
-        Vector2 worldChunkPos = new Vector2(terrainWorldPosition.x, terrainWorldPosition.y);
+        float2 worldChunkPos = new float2(terrainWorldPosition.x, terrainWorldPosition.y);
 
         for (int i = 0, z = 0; z <= chunkSize; z++)
         {
@@ -244,19 +242,28 @@ public class MapGenerator : MonoBehaviour
         return tempVertices;
     }
 
-    private void ChunkVerticesCreation(Vector2Int terrainWorldPosition, Vector2 worldChunkPos,  int i, int z, int x)
+    [BurstCompile]
+    private void ChunkVerticesCreation(float2 terrainWorldPosition, float2 worldChunkPos,  int i, int z, int x)
     {
         currentVertHeight = tempNoiseValues[x, z];
-        currentVertHeight = Mathf.Clamp01(currentVertHeight - falloffMap[terrainWorldPosition.x + x, terrainWorldPosition.y + z]);
+        currentVertHeight = Mathf.Clamp01(currentVertHeight - falloffMap[(int)terrainWorldPosition.x + x, (int)terrainWorldPosition.y + z]);
         currentVertHeight *= tempNoiseValues2[x, z];
 
         //currentVertHeight -= tempNoiseValues2[x, z];
         currentVertHeight = terrainAnimCurve.Evaluate(currentVertHeight) * (noiseLayers[0].heightScale);
         currentVertHeight *= tempNoiseValues[x, z];
+        
 
+        tempVertices[i] = BorderGeneration(tempVertices[i], worldChunkPos, currentVertHeight, i, z, x);
+    }
+
+    [BurstCompile]
+    private float3 BorderGeneration(float3 tempVertices, float2 worldChunkPos, float currentHeight, int i, int z, int x)
+    {
+        float3 output = tempVertices;
 
         // Border generation
-        Vector3 vertextWorldPos = new Vector3(worldChunkPos.x + x, 0, worldChunkPos.y + z);
+        float3 vertextWorldPos = new float3(worldChunkPos.x + x, 0, worldChunkPos.y + z);
         float distance = Vector3.Distance(vertextWorldPos, worldMiddlePoint);
 
         if (distance <= worldBorderDistance)
@@ -264,42 +271,55 @@ public class MapGenerator : MonoBehaviour
 
             if (currentVertHeight < minMapHeight) minMapHeight = currentVertHeight;
             if (currentVertHeight > maxMapHeight) maxMapHeight = currentVertHeight;
-            tempVertices[i] = new Vector3(x, currentVertHeight, z);
+            output = new float3(x, currentVertHeight, z);
 
         }
         if (distance > worldBorderDistance)
         {
 
-            Vector3 toWardsMiddle = worldMiddlePoint - vertextWorldPos;
+            float3 toWardsMiddle = worldMiddlePoint - vertextWorldPos;
             float distanceVertexToBorder = distance - worldBorderDistance;
 
-
-            if (distance < worldBorderDistance + 2) tempVertices[i] = new Vector3(x, 1f, z);
+            if (distance < worldBorderDistance + 2) output = new float3(x, 1f, z);
             else
             {
                 if (distance >= worldBorderDistance + 2)
                 {
-                    tempVertices[i] = new Vector3(x, 0 - distanceVertexToBorder, z);
+                    output = new float3(x, 0 - distanceVertexToBorder, z);
                 }
 
                 if (distance >= worldBorderDistance + 3.5f)
                 {
-                    Vector3 wasPos = tempVertices[i] = new Vector3(x, -3.5f, z);
-                    tempVertices[i] = wasPos + toWardsMiddle.normalized * distanceVertexToBorder;
+                    float3 wasPos = output = new float3(x, -3.5f, z);
+                    output = wasPos + math.normalize(toWardsMiddle) * distanceVertexToBorder;
                 }
             }
         }
+
+        return output;
     }
 
     [BurstCompile]
-    private void GenerateChunkObjects(ChunkData chunkData)
+    private void GenerateChunkGO(ChunkData chunkData)
     {
         GameObject terrainChunk = noColliders? Instantiate(terrainChunkPrefabNoCollider) : Instantiate(terrainChunkPrefab);
-
         tempMesh = new Mesh();
-        tempMesh.SetVertices(chunkData.verticesOld);
+
+        Vector3[] vertices = new Vector3[chunkData.verticesOld.Length];
+        for (int i = 0; i < chunkData.verticesOld.Length; i++)
+        {
+            vertices[i] = new Vector3(chunkData.verticesOld[i].x, chunkData.verticesOld[i].y, chunkData.verticesOld[i].z);
+        }
+
+        List<Vector2> uvs = new List<Vector2>();
+        for (int i = 0; i < chunkData.uvs.Length; i++)
+        {
+            uvs.Add(new Vector2(chunkData.uvs[i].x, chunkData.uvs[i].y));
+        }
+
+        tempMesh.SetVertices(vertices);
         tempMesh.SetTriangles(chunkData.trianglesOld, 0);
-        tempMesh.SetUVs(0, chunkData.uvs);
+        tempMesh.SetUVs(0, uvs);
         tempMesh.RecalculateNormals();
 
         terrainChunk.GetComponent<MeshRenderer>().sharedMaterial = terrainMaterial;
@@ -309,38 +329,6 @@ public class MapGenerator : MonoBehaviour
         terrainChunk.transform.position = new Vector3(chunkData.terrainWorldPosition.x, 0, chunkData.terrainWorldPosition.y);
     }
 
-    [BurstCompile]
-    private int[] GetTriangleList(int chunkSize)
-    {
-        // Is the same for every chunk
-        NativeArray<int> tempTriangleList = new NativeArray<int>(chunkSize * chunkSize * 6, Allocator.TempJob);
-        var job = new GetTriangleListJob
-        {
-            chunkSize = chunkSize,
-            ChunkIndices = tempTriangleList
-        };
-        JobHandle jobHandle = job.Schedule();
-        jobHandle.Complete();
-        int[] triangleList = tempTriangleList.ToArray();
-        tempTriangleList.Dispose();
-        return triangleList;
-    }
-
-    [BurstCompile]
-    private Vector2[] GetUVList(int chunkSize)
-    {
-        // Is the same for every chunk
-        NativeArray<Vector2> tempUVList = new NativeArray<Vector2>((chunkSize + 1) * (chunkSize + 1), Allocator.TempJob);
-        var job = new GetUVListJob
-        {
-            uv = tempUVList,
-            chunkSize = chunkSize
-        };
-        JobHandle jobHandle = job.Schedule();
-        jobHandle.Complete();
-        Vector2[] uv = tempUVList.ToArray<Vector2>();
-        tempUVList.Dispose();
-        return uv;
-    }
+    
 }
 

@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 
 [BurstCompile]
-struct GetUVListJob : IJob
+struct GetChunkUVListJob : IJob
 {
-    public NativeArray<Vector2> uv;
+    public NativeArray<float2> uv;
     public int chunkSize;
 
     public void Execute()
@@ -17,7 +18,7 @@ struct GetUVListJob : IJob
         {
             for (int x = 0; x <= chunkSize; x++)
             {
-                uv[i] = new Vector2(x / (float)chunkSize, z / (float)chunkSize);
+                uv[i] = new float2(x / (float)chunkSize, z / (float)chunkSize);
                 i++;
             }
         }
