@@ -80,11 +80,7 @@ public class MapGenerator : MonoBehaviour
     private Queue<ChunkData> finalChunkDataList = new Queue<ChunkData>();
     private float startTime;
     private float totalGentime;
-
-    private void Start()
-    {
-        startTime = Time.realtimeSinceStartup;
-    }
+    private int chunkGenerated = 0;
 
     private void Update()
     {
@@ -105,7 +101,7 @@ public class MapGenerator : MonoBehaviour
             ChunkData data = finalChunkDataList.Dequeue();
             GenerateChunkGO(data);
 
-            if (data.chunkID == (chunksPerRow * chunksPerRow) - 1)
+            if (chunkGenerated == (chunksPerRow * chunksPerRow))
             {
                 totalGentime = Time.realtimeSinceStartup - startTime;
                 genTimeText.text = "Generation time: " + totalGentime.ToString("0.00") + " s";
@@ -120,7 +116,8 @@ public class MapGenerator : MonoBehaviour
     public void CreateNewMapData()
     {
         if (Convert.ToInt16(mapSizeUIInput.text) % _chunkSize != 0) return;
-
+        startTime = Time.realtimeSinceStartup;
+        chunkGenerated = 0;
         PrepareNewMap();
 
         falloffMap = Maptools.GenerateFalloffMapCircle(_mapSize + chunksPerRow); // complete map falloff map
@@ -128,7 +125,14 @@ public class MapGenerator : MonoBehaviour
         chunkVertexIndices = Maptools.GetChunkTriangleIndexList(_chunkSize); // Triangle indices are the same for every chunk
 
         CreateNoiseLayers();
-        GenerateChunkData(_mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
+
+        for (int x = 0; x < _mapSize /_chunkSize; x++)
+        {
+            for (int z = 0; z < _mapSize / _chunkSize; z++)
+            {
+                GenerateChunkData(new int2(x, z), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
+            }
+        }
     }
 
     [BurstCompile]
@@ -148,7 +152,7 @@ public class MapGenerator : MonoBehaviour
             ChunkData data = chunkDataList.Dequeue();
             data.Vertices = GetChunkVertices(data.ChunkWorldPosition, _chunkSize);
             finalChunkDataList.Enqueue(data);
-
+            chunkGenerated++;
             yield return null;
         }
     }
@@ -156,20 +160,13 @@ public class MapGenerator : MonoBehaviour
 
     [BurstCompile]
     // The whole map
-    private void GenerateChunkData(int mapSize, int chunkSize, int[] tempTriangleList, float2[] tempUvList)
+    private void GenerateChunkData(int2 mapPos, int mapSize, int chunkSize, int[] tempTriangleList, float2[] tempUvList)
     {
-        for (int i = 0, z = 0; z < (mapSize / chunkSize); z++)
-        {
-            for (int x = 0; x < (mapSize / chunkSize); x++)
-            {
-                ChunkData chunkData = new ChunkData();
-                chunkData.TriangleIndexes = tempTriangleList;
-                chunkData.UVs = tempUvList;
-                chunkData.ChunkWorldPosition = new int2(x * chunkSize, z * chunkSize);
-                chunkDataList.Enqueue(chunkData);
-                i++;
-            }
-        }
+        ChunkData chunkData = new ChunkData();
+        chunkData.TriangleIndexes = tempTriangleList;
+        chunkData.UVs = tempUvList;
+        chunkData.ChunkWorldPosition = new int2(mapPos.x * chunkSize, mapPos.y * chunkSize);
+        chunkDataList.Enqueue(chunkData);
     }
 
     [BurstCompile]
