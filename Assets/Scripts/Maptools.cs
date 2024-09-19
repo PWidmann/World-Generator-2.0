@@ -128,6 +128,21 @@ public static class Maptools
         return output;
     }
 
+    public static bool ChunkGenerated(int[,] generatedChunks, int2 targetPos)
+    {
+        bool generated = false;
+
+        for (int x = 0; x < generatedChunks.GetLength(1); x++)
+        {
+            for (int y = 0; y < generatedChunks.GetLength(0); y++)
+            {
+                if (generatedChunks[x, y] == 1) generated = true;
+            }
+        }
+
+        return generated;
+    }
+
     public static float[] FlattenFloat(float[,] array)
     {
         if (array == null)

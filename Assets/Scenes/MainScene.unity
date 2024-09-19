@@ -812,7 +812,7 @@ Transform:
   m_GameObject: {fileID: 618889439}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1000, y: 24.714327, z: 1000}
+  m_LocalPosition: {x: 5266, y: 24.714327, z: 3202}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1463,8 +1463,8 @@ MonoBehaviour:
   noColliders: 1
   randomSeed: 1
   seed: 1337
-  _mapSize: 2000
-  _chunkSize: 200
+  _mapSize: 6000
+  _chunkSize: 100
   terrainAnimCurve:
     serializedVersion: 2
     m_Curve:
@@ -1643,25 +1643,25 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   noiseLayers:
-  - name: GroundLayer
-    heightScale: 60
+  - randomSeed: 1
     seed: 1161
-    randomSeed: 1
+    octaves: 1
+    name: GroundLayer
+    heightScale: 60
     frequency: 1.44
     amplitude: 1.2
     lacunarity: 1.33
     persistance: 0.5
-    octaves: 1
     scale: 112.5
-  - name: Detail Layer
-    heightScale: 1.24
+  - randomSeed: 0
     seed: 3814
-    randomSeed: 0
+    octaves: 1
+    name: Detail Layer
+    heightScale: 1.24
     frequency: 0.92
     amplitude: 10
     lacunarity: 1.09
     persistance: 0.5
-    octaves: 1
     scale: 190.7
   gameWorld: {fileID: 307802628}
   terrainMaterial: {fileID: 2100000, guid: 2d4819a60b51c2f4eac4a7f15b7ed14c, type: 2}
@@ -1794,7 +1794,7 @@ MonoBehaviour:
   m_CaretColor: {r: 0.19607843, g: 0.19607843, b: 0.19607843, a: 1}
   m_CustomCaretColor: 0
   m_SelectionColor: {r: 0.65882355, g: 0.80784315, b: 1, a: 0.7529412}
-  m_Text: '2000
+  m_Text: '6000
 
 '
   m_CaretBlinkRate: 0.85
@@ -1909,7 +1909,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: '2000
+  m_Text: '6000
 
 '
 --- !u!222 &1511487030

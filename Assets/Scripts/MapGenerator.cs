@@ -80,7 +80,9 @@ public class MapGenerator : MonoBehaviour
     private Queue<ChunkData> finalChunkDataList = new Queue<ChunkData>();
     private float startTime;
     private float totalGentime;
-    private int chunkGenerated = 0;
+    private int chunksGenerated = 0;
+    private int[,] chunkGenerationCheck;
+    private bool readyToCheck = false;
 
     private void Update()
     {
@@ -89,8 +91,80 @@ public class MapGenerator : MonoBehaviour
             CreateNewMapData();
         }
 
+        OnDemandChunkQueue();
+
         StartCoroutine(FinalizeChunkData());
         StartCoroutine(CreateTerrainChunks());
+    }
+
+    private void OnDemandChunkQueue()
+    {
+        if (readyToCheck)
+        {
+            int2 currentPosition = new int2((int)(startPosition.position.x / _mapSize * chunksPerRow), (int)(startPosition.position.z / _mapSize * chunksPerRow));
+
+            if (chunkGenerationCheck[currentPosition.x, currentPosition.y] == 0)
+            {
+                chunkGenerationCheck[currentPosition.x, currentPosition.y] = 1;
+                GenerateChunkData(currentPosition, _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
+            }
+
+            if (chunkGenerationCheck[currentPosition.x + 1, currentPosition.y] == 0)
+            {
+                chunkGenerationCheck[currentPosition.x + 1, currentPosition.y] = 1;
+                GenerateChunkData(currentPosition + new int2(1, 0), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
+            }
+
+            if (chunkGenerationCheck[currentPosition.x - 1, currentPosition.y] == 0)
+            {
+                chunkGenerationCheck[currentPosition.x - 1, currentPosition.y] = 1;
+                GenerateChunkData(currentPosition + new int2(-1, 0), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
+            }
+
+            if (chunkGenerationCheck[currentPosition.x, currentPosition.y + 1] == 0)
+            {
+                chunkGenerationCheck[currentPosition.x, currentPosition.y + 1] = 1;
+                GenerateChunkData(currentPosition + new int2(0, 1), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
+            }
+
+            if (chunkGenerationCheck[currentPosition.x, currentPosition.y - 1] == 0)
+            {
+                chunkGenerationCheck[currentPosition.x, currentPosition.y - 1] = 1;
+                GenerateChunkData(currentPosition + new int2(0, -1), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
+            }
+        }
+    }
+
+    [BurstCompile]
+    public void CreateNewMapData()
+    {
+        if (Convert.ToInt16(mapSizeUIInput.text) % _chunkSize != 0) return;
+        startTime = Time.realtimeSinceStartup;
+        chunksGenerated = 0;
+        PrepareNewMap();
+
+        falloffMap = Maptools.GenerateFalloffMapCircle(_mapSize + chunksPerRow); // complete map falloff map
+        chunkUVMap = Maptools.GetChunkUVList(_chunkSize); // UV lists are the same for every chunk
+        chunkVertexIndices = Maptools.GetChunkTriangleIndexList(_chunkSize); // Triangle indices are the same for every chunk
+
+        CreateNoiseLayers();
+
+        readyToCheck = true;
+    }
+
+    
+
+    [BurstCompile]
+    private IEnumerator FinalizeChunkData()
+    {
+        if (chunkDataList.Count > 0)
+        {
+            ChunkData data = chunkDataList.Dequeue();
+            data.Vertices = GetChunkVertices(data.ChunkWorldPosition, _chunkSize);
+            finalChunkDataList.Enqueue(data);
+            chunksGenerated++;
+            yield return null;
+        }
     }
 
     [BurstCompile]
@@ -101,7 +175,7 @@ public class MapGenerator : MonoBehaviour
             ChunkData data = finalChunkDataList.Dequeue();
             GenerateChunkGO(data);
 
-            if (chunkGenerated == (chunksPerRow * chunksPerRow))
+            if (chunksGenerated == (chunksPerRow * chunksPerRow))
             {
                 totalGentime = Time.realtimeSinceStartup - startTime;
                 genTimeText.text = "Generation time: " + totalGentime.ToString("0.00") + " s";
@@ -111,52 +185,6 @@ public class MapGenerator : MonoBehaviour
 
         yield return null;
     }
-
-    [BurstCompile]
-    public void CreateNewMapData()
-    {
-        if (Convert.ToInt16(mapSizeUIInput.text) % _chunkSize != 0) return;
-        startTime = Time.realtimeSinceStartup;
-        chunkGenerated = 0;
-        PrepareNewMap();
-
-        falloffMap = Maptools.GenerateFalloffMapCircle(_mapSize + chunksPerRow); // complete map falloff map
-        chunkUVMap = Maptools.GetChunkUVList(_chunkSize); // UV lists are the same for every chunk
-        chunkVertexIndices = Maptools.GetChunkTriangleIndexList(_chunkSize); // Triangle indices are the same for every chunk
-
-        CreateNoiseLayers();
-
-        for (int x = 0; x < _mapSize /_chunkSize; x++)
-        {
-            for (int z = 0; z < _mapSize / _chunkSize; z++)
-            {
-                GenerateChunkData(new int2(x, z), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
-            }
-        }
-    }
-
-    [BurstCompile]
-    private void CreateNoiseLayers()
-    {
-        foreach (NoiseLayer layer in noiseLayers)
-        {
-            layerNoises.Add(new PerlinNoise(layer.frequency, layer.amplitude, layer.lacunarity, layer.persistance, layer.octaves));
-        }
-    }
-
-    [BurstCompile]
-    private IEnumerator FinalizeChunkData()
-    {
-        if (chunkDataList.Count > 0)
-        {
-            ChunkData data = chunkDataList.Dequeue();
-            data.Vertices = GetChunkVertices(data.ChunkWorldPosition, _chunkSize);
-            finalChunkDataList.Enqueue(data);
-            chunkGenerated++;
-            yield return null;
-        }
-    }
-
 
     [BurstCompile]
     // The whole map
@@ -233,6 +261,15 @@ public class MapGenerator : MonoBehaviour
         terrainChunk.transform.position = new Vector3(chunkData.ChunkWorldPosition.x, 0, chunkData.ChunkWorldPosition.y);
     }
 
+    [BurstCompile]
+    private void CreateNoiseLayers()
+    {
+        foreach (NoiseLayer layer in noiseLayers)
+        {
+            layerNoises.Add(new PerlinNoise(layer.frequency, layer.amplitude, layer.lacunarity, layer.persistance, layer.octaves));
+        }
+    }
+
     private void PrepareNewMap()
     {
         if (randomSeed) seed = UnityEngine.Random.Range(0, 100000);
@@ -241,6 +278,15 @@ public class MapGenerator : MonoBehaviour
         chunkDataList.Clear();
         finalChunkDataList.Clear();
         worldMiddlePoint = new Vector3(_mapSize / 2, 0, _mapSize / 2);
+        chunkGenerationCheck = new int[_mapSize /_chunkSize, _mapSize / _chunkSize];
+
+        for (int x = 0; x < _mapSize / _chunkSize; x++)
+        {
+            for (int y = 0; y < _mapSize / _chunkSize; y++)
+            {
+                chunkGenerationCheck[x, y] = 0;
+            }
+        }
         worldBorderDistance = (_mapSize / 2) - 4;
         genTimeText.text = "";
         startTime = Time.realtimeSinceStartup;
