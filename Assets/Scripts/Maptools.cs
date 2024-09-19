@@ -90,7 +90,45 @@ public static class Maptools
         return resultMap;
     }
 
-    public static float[] Flatten(float[,] array)
+    [BurstCompile]
+    public static float3 BorderGeneration(int worldBorderDistance, float3 worldMiddlePoint, float3 tempVertex, float2 worldChunkPos, float currentHeight, int z, int x)
+    {
+        float3 output = tempVertex;
+
+        // Border generation
+        float3 vertextWorldPos = new float3(worldChunkPos.x + x, 0, worldChunkPos.y + z);
+        float distance = Vector3.Distance(vertextWorldPos, worldMiddlePoint);
+
+        if (distance <= worldBorderDistance)
+        {
+            output = new float3(x, currentHeight, z);
+        }
+        if (distance > worldBorderDistance)
+        {
+
+            float3 toWardsMiddle = worldMiddlePoint - vertextWorldPos;
+            float distanceVertexToBorder = distance - worldBorderDistance;
+
+            if (distance < worldBorderDistance + 2) output = new float3(x, 1f, z);
+            else
+            {
+                if (distance >= worldBorderDistance + 2)
+                {
+                    output = new float3(x, 0 - distanceVertexToBorder, z);
+                }
+
+                if (distance >= worldBorderDistance + 3.5f)
+                {
+                    float3 wasPos = output = new float3(x, -3.5f, z);
+                    output = wasPos + math.normalize(toWardsMiddle) * distanceVertexToBorder;
+                }
+            }
+        }
+
+        return output;
+    }
+
+    public static float[] FlattenFloat(float[,] array)
     {
         if (array == null)
             throw new ArgumentNullException(nameof(array), "Input array cannot be null.");
@@ -110,7 +148,7 @@ public static class Maptools
         return flatArray;
     }
 
-    public static float[,] Unflatten(float[] flatArray, int rows, int cols)
+    public static float[,] UnflattenFloat(float[] flatArray, int rows, int cols)
     {
         if (flatArray == null)
             throw new ArgumentNullException(nameof(flatArray), "Input flat array cannot be null.");
@@ -132,5 +170,19 @@ public static class Maptools
         }
 
         return array;
+    }
+
+    
+    public static Vector2[] Float2ToVector2Array(float2[] array)
+    {
+        Vector2[] vector2Array = new Vector2[array.Length];
+
+        // Convert each float2 to Vector2
+        for (int i = 0; i < array.Length; i++)
+        {
+            vector2Array[i] = new Vector2(array[i].x, array[i].y);
+        }
+
+        return vector2Array;
     }
 }

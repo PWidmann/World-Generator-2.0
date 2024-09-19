@@ -13,7 +13,7 @@ public class GeneratorUI : MonoBehaviour
 
     public void CreateButton()
     {
-        mapGenerator.GenerateNewMap();
+        mapGenerator.CreateNewMapData();
     }
 
     private void Update()
