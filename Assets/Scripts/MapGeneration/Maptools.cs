@@ -58,34 +58,36 @@ public static class Maptools
     }
 
     [BurstCompile]
-    public static float[,] GenerateFalloffMapCircle(int mapSize)
+    public static float[,] GenerateChunkFalloffMap(int mapSize, int chunkSize, int2 terrainPos)
     {
-        // Flattened 2D array as a NativeArray<float>
-        NativeArray<float> falloffMap = new NativeArray<float>(mapSize * mapSize, Allocator.TempJob);
+        // Generate a FalloffMap based on chunk position and world middle point
 
-        // Create and schedule the job
-        var job = new FalloffMapJob
+        // Flattened array
+        NativeArray<float> fallOffMap = new NativeArray<float>(chunkSize * chunkSize, Allocator.TempJob);
+
+        ChunkFalloffMapJob job = new ChunkFalloffMapJob
         {
-            width = mapSize,
-            height = mapSize,
-            falloffMap = falloffMap
+            mapSize = mapSize,
+            chunkSize = chunkSize,
+            chunkWorldPos = terrainPos,
+            falloffMap = fallOffMap
         };
 
-        JobHandle jobHandle = job.Schedule(mapSize * mapSize, 128);
+        JobHandle jobHandle = job.Schedule();
         jobHandle.Complete();
 
         // Convert the flattened NativeArray back to a 2D float array
-        float[,] resultMap = new float[mapSize, mapSize];
-        for (int i = 0; i < mapSize; i++)
+        float[,] resultMap = new float[chunkSize, chunkSize];
+        for (int x = 0; x < chunkSize; x++)
         {
-            for (int j = 0; j < mapSize; j++)
+            for (int y = 0; y < chunkSize; y++)
             {
-                resultMap[i, j] = falloffMap[i * mapSize + j];
+                resultMap[x, y] = fallOffMap[x * chunkSize + y];
             }
         }
 
         // Dispose of the NativeArray to avoid memory leaks
-        falloffMap.Dispose();
+        fallOffMap.Dispose();
 
         return resultMap;
     }
@@ -97,7 +99,7 @@ public static class Maptools
 
         // Border generation
         float3 vertextWorldPos = new float3(worldChunkPos.x + x, 0, worldChunkPos.y + z);
-        float distance = Vector3.Distance(vertextWorldPos, worldMiddlePoint);
+        float distance = math.distance(vertextWorldPos, worldMiddlePoint);
 
         if (distance <= worldBorderDistance)
         {
@@ -151,6 +153,26 @@ public static class Maptools
         int rows = array.GetLength(0);
         int cols = array.GetLength(1);
         float[] flatArray = new float[rows * cols];
+
+        for (int i = 0; i < rows; i++)
+        {
+            for (int j = 0; j < cols; j++)
+            {
+                flatArray[i * cols + j] = array[i, j];
+            }
+        }
+
+        return flatArray;
+    }
+
+    public static NativeArray<int> FlattenInt(int[,] array)
+    {
+        if (array == null)
+            throw new ArgumentNullException(nameof(array), "Input array cannot be null.");
+
+        int rows = array.GetLength(0);
+        int cols = array.GetLength(1);
+        NativeArray<int> flatArray = new NativeArray<int>(rows * cols, Allocator.Temp);
 
         for (int i = 0; i < rows; i++)
         {

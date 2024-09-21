@@ -10,6 +10,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 
@@ -83,76 +84,36 @@ public class MapGenerator : MonoBehaviour
     private int chunksGenerated = 0;
     private int[,] chunkGenerationCheck;
     private bool readyToCheck = false;
+    int2 playerPosition;
 
     private void Update()
     {
-        if (Input.GetKeyUp(KeyCode.U))
+        if (Input.GetKeyDown(KeyCode.N))
         {
             CreateNewMapData();
         }
 
-        OnDemandChunkQueue();
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            SceneManager.LoadScene("MainScene");
+        }
 
+        StartCoroutine(OnDemandChunkQueue());
         StartCoroutine(FinalizeChunkData());
         StartCoroutine(CreateTerrainChunks());
     }
 
-    private void OnDemandChunkQueue()
-    {
-        if (readyToCheck)
-        {
-            int2 currentPosition = new int2((int)(startPosition.position.x / _mapSize * chunksPerRow), (int)(startPosition.position.z / _mapSize * chunksPerRow));
-
-            if (chunkGenerationCheck[currentPosition.x, currentPosition.y] == 0)
-            {
-                chunkGenerationCheck[currentPosition.x, currentPosition.y] = 1;
-                GenerateChunkData(currentPosition, _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
-            }
-
-            if (chunkGenerationCheck[currentPosition.x + 1, currentPosition.y] == 0)
-            {
-                chunkGenerationCheck[currentPosition.x + 1, currentPosition.y] = 1;
-                GenerateChunkData(currentPosition + new int2(1, 0), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
-            }
-
-            if (chunkGenerationCheck[currentPosition.x - 1, currentPosition.y] == 0)
-            {
-                chunkGenerationCheck[currentPosition.x - 1, currentPosition.y] = 1;
-                GenerateChunkData(currentPosition + new int2(-1, 0), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
-            }
-
-            if (chunkGenerationCheck[currentPosition.x, currentPosition.y + 1] == 0)
-            {
-                chunkGenerationCheck[currentPosition.x, currentPosition.y + 1] = 1;
-                GenerateChunkData(currentPosition + new int2(0, 1), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
-            }
-
-            if (chunkGenerationCheck[currentPosition.x, currentPosition.y - 1] == 0)
-            {
-                chunkGenerationCheck[currentPosition.x, currentPosition.y - 1] = 1;
-                GenerateChunkData(currentPosition + new int2(0, -1), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
-            }
-        }
-    }
-
-    [BurstCompile]
     public void CreateNewMapData()
     {
-        if (Convert.ToInt16(mapSizeUIInput.text) % _chunkSize != 0) return;
+        if (Convert.ToInt32(mapSizeUIInput.text) % _chunkSize != 0) return;
         startTime = Time.realtimeSinceStartup;
         chunksGenerated = 0;
         PrepareNewMap();
-
-        falloffMap = Maptools.GenerateFalloffMapCircle(_mapSize + chunksPerRow); // complete map falloff map
         chunkUVMap = Maptools.GetChunkUVList(_chunkSize); // UV lists are the same for every chunk
         chunkVertexIndices = Maptools.GetChunkTriangleIndexList(_chunkSize); // Triangle indices are the same for every chunk
-
         CreateNoiseLayers();
-
         readyToCheck = true;
     }
-
-    
 
     [BurstCompile]
     private IEnumerator FinalizeChunkData()
@@ -174,15 +135,7 @@ public class MapGenerator : MonoBehaviour
         {
             ChunkData data = finalChunkDataList.Dequeue();
             GenerateChunkGO(data);
-
-            if (chunksGenerated == (chunksPerRow * chunksPerRow))
-            {
-                totalGentime = Time.realtimeSinceStartup - startTime;
-                genTimeText.text = "Generation time: " + totalGentime.ToString("0.00") + " s";
-                genButton.enabled = true;
-            }
         }
-
         yield return null;
     }
 
@@ -197,20 +150,21 @@ public class MapGenerator : MonoBehaviour
         chunkDataList.Enqueue(chunkData);
     }
 
-    [BurstCompile]
+
     private float3[] GetChunkVertices(int2 terrainWorldPosition, int chunkSize)
     {
         tempVertices = new float3[(chunkSize + 1) * (chunkSize + 1)];
         int2 chunkPos = new int2(terrainWorldPosition.x, terrainWorldPosition.y);
+        float[,] fallOffHeights = Maptools.GenerateChunkFalloffMap(_mapSize + 1, _chunkSize + 1, terrainWorldPosition);
+
 
         tempNoiseValues = layerNoises[0].GetNoiseValues(chunkPos.x, chunkPos.y, chunkSize, noiseLayers[0].scale, seed);
         tempNoiseValues2 = layerNoises[1].GetNoiseValues(chunkPos.x, chunkPos.y, chunkSize, noiseLayers[1].scale, seed);
-
         for (int i = 0, z = 0; z <= chunkSize; z++)
         {
             for (int x = 0; x <= chunkSize; x++)
             {
-                ChunkVerticesCreation(terrainWorldPosition, chunkPos, i, z, x);
+                tempVertices[i] = GetCurrentChunkVertex(terrainWorldPosition, chunkPos, i, z, x, fallOffHeights[x, z]);
                 i++;
             }
         }
@@ -218,23 +172,24 @@ public class MapGenerator : MonoBehaviour
         return tempVertices;
     }
 
-    private void ChunkVerticesCreation(float2 terrainWorldPosition, float2 worldChunkPos,  int i, int z, int x)
+    private float3 GetCurrentChunkVertex(float2 terrainWorldPosition, float2 worldChunkPos,  int i, int z, int x, float fallOffValue)
     {
         currentVertHeight = tempNoiseValues[x, z];
-        currentVertHeight = Mathf.Clamp01(currentVertHeight - falloffMap[(int)terrainWorldPosition.x + x, (int)terrainWorldPosition.y + z]);
+        currentVertHeight = Mathf.Clamp01(currentVertHeight - fallOffValue);
         currentVertHeight *= tempNoiseValues2[x, z];
-        //currentVertHeight -= tempNoiseValues2[x, z];
         currentVertHeight = terrainAnimCurve.Evaluate(currentVertHeight) * (noiseLayers[0].heightScale);
+        //currentVertHeight -= tempNoiseValues2[x, z];
         currentVertHeight *= tempNoiseValues[x, z];
         if (currentVertHeight < minMapHeight) minMapHeight = currentVertHeight;
         if (currentVertHeight > maxMapHeight) maxMapHeight = currentVertHeight;
-        tempVertices[i] = Maptools.BorderGeneration(worldBorderDistance, worldMiddlePoint, tempVertices[i], worldChunkPos, currentVertHeight, z, x);
+        return Maptools.BorderGeneration(worldBorderDistance, worldMiddlePoint, tempVertices[i], worldChunkPos, currentVertHeight, z, x);
     }
    
 
     private void GenerateChunkGO(ChunkData chunkData)
     {
         GameObject terrainChunk = noColliders? Instantiate(terrainChunkPrefabNoCollider) : Instantiate(terrainChunkPrefab);
+        terrainChunk.name = "TerrainChunk";
         tempMesh = new Mesh();
 
         Vector3[] vertices = new Vector3[chunkData.Vertices.Length];
@@ -273,7 +228,7 @@ public class MapGenerator : MonoBehaviour
     private void PrepareNewMap()
     {
         if (randomSeed) seed = UnityEngine.Random.Range(0, 100000);
-        _mapSize = Convert.ToInt16(mapSizeUIInput.text);
+        _mapSize = Convert.ToInt32(mapSizeUIInput.text);
         layerNoises.Clear();
         chunkDataList.Clear();
         finalChunkDataList.Clear();
@@ -294,6 +249,8 @@ public class MapGenerator : MonoBehaviour
         chunksPerRow = _mapSize / _chunkSize;
         noColliders = colliderToggle.isOn ? false : true;
 
+        //startPosition.position = new Vector3(_mapSize / 2, 10, _mapSize / 4);
+
         // TODO: Water must be created/scaled properly
         float scale2k = 19.93f;
         scale2k = (_mapSize / 2000f) * scale2k;
@@ -303,6 +260,89 @@ public class MapGenerator : MonoBehaviour
         foreach (Transform t in gameWorld.transform)
         {
             Destroy(t.gameObject);
+        }
+    }
+
+    private IEnumerator OnDemandChunkQueue()
+    {
+        if (readyToCheck)
+        {
+            playerPosition = new int2((int)(startPosition.position.x / _mapSize * chunksPerRow), (int)(startPosition.position.z / _mapSize * chunksPerRow));
+
+            try
+            {
+                // current pos
+                if (chunkGenerationCheck[playerPosition.x, playerPosition.y] == 0)
+                {
+                    chunkGenerationCheck[playerPosition.x, playerPosition.y] = 1;
+                    GenerateChunkData(playerPosition, _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
+                }
+
+                // Right
+                if (chunkGenerationCheck[playerPosition.x + 1, playerPosition.y] == 0)
+                {
+                    chunkGenerationCheck[playerPosition.x + 1, playerPosition.y] = 1;
+                    GenerateChunkData(playerPosition + new int2(1, 0), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
+                }
+
+                // Left
+                if (chunkGenerationCheck[playerPosition.x - 1, playerPosition.y] == 0)
+                {
+                    chunkGenerationCheck[playerPosition.x - 1, playerPosition.y] = 1;
+                    GenerateChunkData(playerPosition + new int2(-1, 0), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
+                }
+
+                // Up
+                if (chunkGenerationCheck[playerPosition.x, playerPosition.y + 1] == 0)
+                {
+                    chunkGenerationCheck[playerPosition.x, playerPosition.y + 1] = 1;
+                    GenerateChunkData(playerPosition + new int2(0, 1), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
+                }
+
+                // down
+                if (chunkGenerationCheck[playerPosition.x, playerPosition.y - 1] == 0)
+                {
+                    chunkGenerationCheck[playerPosition.x, playerPosition.y - 1] = 1;
+                    GenerateChunkData(playerPosition + new int2(0, -1), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap); // down
+                }
+
+                
+
+                // right down
+                if (chunkGenerationCheck[playerPosition.x + 1, playerPosition.y - 1] == 0)
+                {
+                    chunkGenerationCheck[playerPosition.x + 1, playerPosition.y - 1] = 1;
+                    GenerateChunkData(playerPosition + new int2(1, -1), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
+                }
+
+                // right up
+                if (chunkGenerationCheck[playerPosition.x + 1, playerPosition.y + 1] == 0)
+                {
+                    chunkGenerationCheck[playerPosition.x + 1, playerPosition.y + 1] = 1;
+                    GenerateChunkData(playerPosition + new int2(1, 1), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
+                }
+
+                // left down
+                if (chunkGenerationCheck[playerPosition.x - 1, playerPosition.y - 1] == 0)
+                {
+                    chunkGenerationCheck[playerPosition.x - 1, playerPosition.y - 1] = 1;
+                    GenerateChunkData(playerPosition + new int2(-1, -1), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
+                }
+
+                // left up
+                if (chunkGenerationCheck[playerPosition.x - 1, playerPosition.y + 1] == 0)
+                {
+                    chunkGenerationCheck[playerPosition.x - 1, playerPosition.y + 1] = 1;
+                    GenerateChunkData(playerPosition + new int2(-1, 1), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
+                }
+            }
+
+            catch
+            {
+                Debug.Log("Blah outside of map array");
+            }
+
+            yield return null;
         }
     }
 }

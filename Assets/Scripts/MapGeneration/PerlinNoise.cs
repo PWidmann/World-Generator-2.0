@@ -41,6 +41,7 @@ public class PerlinNoise
         int xMinPos = xPos;
         int yMinPos = yPos;
 
+
         for (int x = 0; x < noiseValues.GetLength(0); x++)
         {
             for (int y = 0; y < noiseValues.GetLength(1); y++)
@@ -52,7 +53,7 @@ public class PerlinNoise
 
                 for (int k = 0; k < octaves; k++)
                 {
-                    noiseValues[x, y] += Mathf.PerlinNoise(((xMinPos + x) / scale * frequency) * amplitude + seed, ((yMinPos + y) / scale * frequency) * amplitude + seed);
+                    noiseValues[x, y] += SimplexNoise.Noise(((xMinPos + x) / scale * frequency) * amplitude + seed, ((yMinPos + y) / scale * frequency) * amplitude + seed);
                     frequency *= lacunarity;
                     amplitude *= persistance;
                 }
