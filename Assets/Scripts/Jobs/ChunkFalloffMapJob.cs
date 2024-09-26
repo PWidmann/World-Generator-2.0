@@ -12,7 +12,12 @@ struct ChunkFalloffMapJob : IJob
     public int mapSize;
     public int2 chunkWorldPos;
     public NativeArray<float> falloffMap;
-    
+
+    private float2 currentPos;
+    private float2 mapMiddle;
+    private float distance;
+    private float height;
+
     public void Execute()
     {
         // Generate a FalloffMap based on chunk position and world middle point
@@ -21,11 +26,11 @@ struct ChunkFalloffMapJob : IJob
         {
             for (int y = 0; y < chunkSize; y++)
             {
-                float2 currentPos = new float2((chunkWorldPos.x) + x, (chunkWorldPos.y) + y);
-                float2 mapMiddle = new float2(mapSize / 2f, mapSize / 2f);
-                float distance = math.distance(currentPos, mapMiddle);
-                float height01 = distance / (mapSize / 2f);
-                falloffMap[x * chunkSize + y] = height01;
+                currentPos = new float2((chunkWorldPos.x) + x, (chunkWorldPos.y) + y);
+                mapMiddle = new float2(mapSize / 2f, mapSize / 2f);
+                distance = math.distance(currentPos, mapMiddle);
+                height = distance / (mapSize / 2f);
+                falloffMap[x * chunkSize + y] = height;
             }
         }
     }

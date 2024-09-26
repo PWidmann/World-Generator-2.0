@@ -928,7 +928,7 @@ Transform:
   m_GameObject: {fileID: 618889439}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.6989207, z: 0, w: 0.71519923}
-  m_LocalPosition: {x: 3032.3577, y: 20, z: 651.43396}
+  m_LocalPosition: {x: 2359, y: 20, z: 2128}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -954,8 +954,8 @@ MonoBehaviour:
   zoomSmoothTime: 0.2
   startCameraDistance: 40
   minCameraDistance: 5
-  maxCameraDistance: 300
-  zoomStep: 10
+  maxCameraDistance: 500
+  zoomStep: 20
   rotationSpeed: 1
   rotationSmoothSpeed: 1
   invertRotation: 0
@@ -1582,6 +1582,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1270277141}
   - component: {fileID: 1270277140}
+  - component: {fileID: 1270277142}
   m_Layer: 0
   m_Name: Systems
   m_TagString: Untagged
@@ -1616,6 +1617,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1270277142
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1270277139}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b18517a1c37cb24598336455002b948, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  startPosition: {fileID: 618889440}
 --- !u!1 &1419373292
 GameObject:
   m_ObjectHideFlags: 0
@@ -1646,9 +1660,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   noColliders: 1
+  generateWholeMap: 0
   randomSeed: 1
-  seed: 1337
-  _mapSize: 4000
+  seed: 86117
+  _mapSize: 12000
   _chunkSize: 100
   terrainAnimCurve:
     serializedVersion: 2
@@ -1832,22 +1847,22 @@ MonoBehaviour:
     seed: 1161
     octaves: 2
     name: GroundLayer
-    heightScale: 40
-    frequency: 1.2
-    amplitude: 1.2
-    lacunarity: 1.25
+    heightScale: 80
+    frequency: 0.9
+    amplitude: 1.3
+    lacunarity: 1
     persistance: 0.5
-    scale: 112.5
+    scale: 228.2
   - randomSeed: 0
     seed: 3814
     octaves: 1
     name: Detail Layer
-    heightScale: 2.08
-    frequency: 1.04
-    amplitude: 10
-    lacunarity: 1.09
+    heightScale: 23.6
+    frequency: 1
+    amplitude: 1
+    lacunarity: 0.62
     persistance: 0.5
-    scale: 190.7
+    scale: 178.1
   gameWorld: {fileID: 307802628}
   terrainMaterial: {fileID: 2100000, guid: 2d4819a60b51c2f4eac4a7f15b7ed14c, type: 2}
   terrainChunkPrefab: {fileID: 1311922243202977980, guid: 3ab1088d541addd4da36cb4df3f64043,
@@ -1979,9 +1994,7 @@ MonoBehaviour:
   m_CaretColor: {r: 0.19607843, g: 0.19607843, b: 0.19607843, a: 1}
   m_CustomCaretColor: 0
   m_SelectionColor: {r: 0.65882355, g: 0.80784315, b: 1, a: 0.7529412}
-  m_Text: '4000
-
-'
+  m_Text: 12000
   m_CaretBlinkRate: 0.85
   m_CaretWidth: 1
   m_ReadOnly: 0
@@ -2094,9 +2107,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: '4000
-
-'
+  m_Text: 12000
 --- !u!222 &1511487030
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2729,7 +2740,7 @@ Transform:
   m_GameObject: {fileID: 3980366327098392701}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1000, y: 0.8, z: 1000}
+  m_LocalPosition: {x: 1000, y: 3, z: 1000}
   m_LocalScale: {x: 19.93, y: 1, z: 19.93}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2797,6 +2808,7 @@ GameObject:
   - component: {fileID: 3980366327098392691}
   - component: {fileID: 3980366327098392700}
   - component: {fileID: 1205768976025792017}
+  - component: {fileID: 3980366327098392702}
   m_Layer: 4
   m_Name: Water
   m_TagString: Untagged
@@ -2804,6 +2816,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 0
+--- !u!64 &3980366327098392702
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3980366327098392701}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -8670151273213183110, guid: 1ab718e1f8990cc4982762d0d4450410, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -4,8 +4,9 @@ using UnityEngine;
 using System.Threading;
 using Unity.Mathematics;
 using System;
+using Unity.Burst;
 
-public class PerlinNoise
+public class Noise
 {
     private int seed;
     private float frequency;
@@ -18,7 +19,7 @@ public class PerlinNoise
 
 
 
-    public PerlinNoise(float frequency, float amplitude, float lacunarity, float persistance, int octaves)
+    public Noise(float frequency, float amplitude, float lacunarity, float persistance, int octaves)
     {
         this.frequency = frequency;
         this.amplitude = amplitude;
@@ -33,7 +34,8 @@ public class PerlinNoise
     /// <summary>
     /// Gets called per chunk
     /// </summary>
-   
+
+    [BurstCompile]
     public float[,] GetNoiseValues(int xPos, int yPos, int chunkSize, float scale, int seed)
     {
         float[,] noiseValues = new float[chunkSize + 1, chunkSize + 1];
@@ -71,7 +73,15 @@ public class PerlinNoise
                     minVal = noiseValues[x, y];
                 }
 
-                noiseValues[x, y] = Mathf.InverseLerp(8, 0, noiseValues[x, y]);
+                
+            }
+        }
+
+        for (int i = 0; i < noiseValues.GetLength(0); i++)
+        {
+            for (int j = 0; j < noiseValues.GetLength(1); j++)
+            {
+                noiseValues[i, j] = math.unlerp(8, 0, noiseValues[i, j]);
             }
         }
 

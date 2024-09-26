@@ -42,6 +42,7 @@ public class MapGenerator : MonoBehaviour
 {
     [Header("Map Settings")]
     [SerializeField] bool noColliders = true;
+    [SerializeField] bool generateWholeMap = false;
     [SerializeField] private bool randomSeed = true;
     [SerializeField] private int seed = 1337;
     [SerializeField] private int _mapSize = 2000;
@@ -66,7 +67,7 @@ public class MapGenerator : MonoBehaviour
     private float maxMapHeight = 0;
     private int worldBorderDistance = 1000;
     private List<GameObject> chunks = new List<GameObject>();
-    private List<PerlinNoise> layerNoises = new List<PerlinNoise>();
+    private List<Noise> layerNoises = new List<Noise>();
     private float3 worldMiddlePoint;
     private Mesh tempMesh;
     private int[] chunkVertexIndices;
@@ -98,7 +99,24 @@ public class MapGenerator : MonoBehaviour
             SceneManager.LoadScene("MainScene");
         }
 
-        StartCoroutine(OnDemandChunkQueue());
+        if (generateWholeMap)
+        {
+            if (readyToCheck)
+            {
+                for (int x = 0; x < _mapSize / _chunkSize; x++)
+                {
+                    for (int y = 0; y < _mapSize / _chunkSize; y++)
+                    {
+                        GenerateChunkData(new int2(x, y), _mapSize, _chunkSize, chunkVertexIndices, chunkUVMap);
+                    }
+                }
+                
+            }
+        }
+        else
+        { 
+            StartCoroutine(OnDemandChunkQueue());
+        }
         StartCoroutine(FinalizeChunkData());
         StartCoroutine(CreateTerrainChunks());
     }
@@ -221,7 +239,7 @@ public class MapGenerator : MonoBehaviour
     {
         foreach (NoiseLayer layer in noiseLayers)
         {
-            layerNoises.Add(new PerlinNoise(layer.frequency, layer.amplitude, layer.lacunarity, layer.persistance, layer.octaves));
+            layerNoises.Add(new Noise(layer.frequency, layer.amplitude, layer.lacunarity, layer.persistance, layer.octaves));
         }
     }
 
@@ -245,7 +263,7 @@ public class MapGenerator : MonoBehaviour
         worldBorderDistance = (_mapSize / 2) - 4;
         genTimeText.text = "";
         startTime = Time.realtimeSinceStartup;
-        genButton.enabled = false;
+        //genButton.enabled = false;
         chunksPerRow = _mapSize / _chunkSize;
         noColliders = colliderToggle.isOn ? false : true;
 
@@ -339,7 +357,7 @@ public class MapGenerator : MonoBehaviour
 
             catch
             {
-                Debug.Log("Blah outside of map array");
+                
             }
 
             yield return null;
